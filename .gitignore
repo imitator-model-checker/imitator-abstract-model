@@ -1,0 +1,36 @@
+# For LaTeX
+*.amc
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.brf
+*.log
+*.nav
+*.out
+*.run.xml
+*.snm
+*.spl
+*.synctex.gz
+*.tdo
+*.toc
+*.vrb
+*.vtc
+.kile
+
+# Fichiers temporaires de sauvegarde
+*~
+
+# IDE
+*.code-workspace
+
+# NOTE: might be enabled or disabled depending on the context
+*.pdf
+
+# For IMITATOR outputs
+*.ps
+*.res
+*.states
+
+# For Java
+*.class
