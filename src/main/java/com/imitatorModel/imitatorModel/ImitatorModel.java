@@ -6,7 +6,9 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
 import java.util.List;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -38,6 +40,27 @@ public class ImitatorModel {
     public List<PTA> getPTAs() {
         return ptas;
     }
+
+    // helper methods
+    public Clock addClock(String name) {
+        Clock clock = new Clock(name);
+        this.addVariable(clock);
+        return clock;
+    }
+
+    public Parameter addParameter(String name) {
+        Parameter parameter = new Parameter(name);
+        this.addVariable(parameter);
+        return parameter;
+    }
+
+    public Rational addRational(String name) {
+        Rational rational = new Rational(name);
+        this.addVariable(rational);
+        return rational;
+    }
+
+
 
     public String toIMITATOR() {
         StringBuilder sb = new StringBuilder();
@@ -110,4 +133,16 @@ public class ImitatorModel {
 
         return sb.toString();  // Remove the last newline
     }
+
+    public void export2File(String outputFilePath) {
+        String stringModel = this.toIMITATOR();  
+
+        try {
+            Files.writeString(Path.of(outputFilePath), stringModel);
+            System.out.println("Model exported to " + outputFilePath);
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
 }

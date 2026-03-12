@@ -6,7 +6,7 @@ import java.util.List;
 public class Location {
     private String name;
     private ConjunctionOfConstraints invariant;
-    private List<Pair<Variable, LinearTerm>> rate;
+    private List<Pair<Variable, LinearExpr>> rate;
     private List<Transition> transitions;
     private Boolean isUrgent;
 
@@ -51,11 +51,11 @@ public class Location {
         return transitions;
     }
 
-    public void addRate(Variable variable, LinearTerm linearTerm) {
+    public void addRate(Variable variable, LinearExpr linearTerm) {
         rate.add(new Pair<>(variable, linearTerm));
     }
 
-    public List<Pair<Variable, LinearTerm>> getRate() {
+    public List<Pair<Variable, LinearExpr>> getRate() {
         return rate;
     }
 
@@ -75,7 +75,7 @@ public class Location {
             sb.append(" flow{");
             for (int i = 0; i < rate.size(); i++) {
                 Variable variable = rate.get(i).getFirst();
-                LinearTerm lt = rate.get(i).getSecond();
+                LinearExpr lt = rate.get(i).getSecond();
                 sb.append(variable.toIMITATOR() + "' = " + lt.toIMITATOR());
 
                 if (i < rate.size() - 1) {

@@ -34,3 +34,14 @@
 
 # For Java
 *.class
+
+
+
+
+# Ignore Maven build outputs
+target/logs2imi-*.jar
+target/maven-archiver/
+target/maven-status/
+
+# Ignore VS Code workspace settings
+.vscode/

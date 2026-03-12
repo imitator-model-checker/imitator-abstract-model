@@ -7,6 +7,7 @@
   <groupId>logs2imi</groupId>
   <artifactId>logs2imi</artifactId>
   <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
   <properties>
     <maven.compiler.source>21</maven.compiler.source>
@@ -35,7 +36,7 @@
         </execution>
     </executions>
         <configuration>
-        <mainClass>com.logs2imi.Main</mainClass>
+        <mainClass>com.imitatorModel.Main</mainClass>
             </configuration>
 </plugin>
     </plugins>

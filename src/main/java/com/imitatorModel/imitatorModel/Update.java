@@ -1,24 +1,38 @@
 package com.imitatorModel.imitatorModel;
 
 public class Update {
-    private Variable variable;
-    private LinearTerm term;
+    private String update;
 
-    public Update(Variable variable, LinearTerm term) {
-        this.variable = variable;
-        this.term = term;
+    public Update(String update) {
+        this.update = update;
     }
 
-    public Variable getVariable() {
-        return variable;
+    // public Update() {
+    //     this.update = null;
+    // }
+
+    public String toIMITATOR(){
+        return update;
     }
 
-    public LinearTerm getTerm() {
-        return term;
-    }
+    // private Variable variable;
+    // private LinearExpr term;
 
-    public String toIMITATOR() {
-        return variable.toIMITATOR() + " <- " + term.toIMITATOR();
-    }
+    // public Update(Variable variable, LinearExpr term) {
+    //     this.variable = variable;
+    //     this.term = term;
+    // }
+
+    // public Variable getVariable() {
+    //     return variable;
+    // }
+
+    // public LinearExpr getTerm() {
+    //     return term;
+    // }
+
+    // public String toIMITATOR() {
+    //     return variable.toIMITATOR() + " <- " + term.toIMITATOR();
+    // }
 
 }

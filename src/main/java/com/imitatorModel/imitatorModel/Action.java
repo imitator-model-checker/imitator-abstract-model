@@ -1,17 +1,21 @@
 package com.imitatorModel.imitatorModel;
 
+
 public class Action {
-    private String name;
+   private String name;
 
-    public Action(String name) {
-        this.name = name;
-    }
 
-    public String getName() {
-        return name;
-    }
+   public Action(String name) {
+       this.name = name;
+   }
 
-	public String toIMITATOR(){
-		return getName();
-	}
+
+   public String getName() {
+       return name;
+   }
+
+
+   public String toIMITATOR(){
+       return getName();
+   }
 }

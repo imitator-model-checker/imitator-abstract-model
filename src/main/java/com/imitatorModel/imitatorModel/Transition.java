@@ -1,10 +1,13 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.List;
+import java.util.ArrayList;
+
+import javax.swing.SpringLayout.Constraints;
 
 public class Transition {
     private ConjunctionOfConstraints guard;
-    private Action action;
+    private Action action = null;
     private List<Update> updates;
     private Location to;
 
@@ -13,6 +16,22 @@ public class Transition {
         this.action = action;
         this.updates = updates;
         this.to = to;
+    }
+
+
+    public Transition(Action action, Location to) {
+        this.action = action;
+        this.to = to;
+        this.updates = new ArrayList<>();
+        this.guard = new ConjunctionOfConstraints();
+    }
+
+    public void addUpdate(Update update){
+        this.updates.add(update);
+    }
+
+    public void addConstraint(String constraint){
+        this.guard.add(constraint);
     }
 
     public ConjunctionOfConstraints getGuard() {
@@ -34,7 +53,12 @@ public class Transition {
     public String toIMITATOR() {
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
+        // sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
+        sb.append("\n\twhen " + guard.toIMITATOR());
+
+        if (action != null) {
+            sb.append(" sync " + action.toIMITATOR());
+        }
         if(!updates.isEmpty()){
             StringBuilder sb_updates = new StringBuilder();
 

@@ -1,3 +1,4 @@
+// package com.patterns2imi.pattern.patternModel.interval;
 package com.imitatorModel.bigFraction;
 
 import java.math.BigInteger;
@@ -15,19 +16,19 @@ public final class BigFraction implements Comparable<BigFraction> {
     public static final BigFraction ZERO = new BigFraction(BigInteger.ZERO);
     public static final BigFraction ONE = new BigFraction(BigInteger.ONE);
 
+
     public BigFraction(BigInteger n) {
-        this(n, BigInteger.ONE);
+        this(n, BigInteger.ONE);    // cast int n as n/1
     }
 
     public BigFraction(int n) {
-        this(BigInteger.valueOf(n));
+        this(BigInteger.valueOf(n));  // int is diffirent from BigInteger, so we need to convert it first
     }
 
-    public BigFraction(int n, int d) {
+     public BigFraction(int n, int d) {
         this(BigInteger.valueOf(n), BigInteger.valueOf(d));
     }
-
-    public BigFraction(BigInteger n, BigInteger d) {
+   public BigFraction(BigInteger n, BigInteger d) { //reduce to cannonical form
         if (d.equals(BigInteger.ZERO))
             throw new ArithmeticException("Denominator cannot be zero");
         if (d.signum() < 0) {          // keep denominator positive
@@ -39,6 +40,7 @@ public final class BigFraction implements Comparable<BigFraction> {
         this.den = d.divide(g);
     }
 
+    // basic fractional arithmetic operations, all return reduced results
     public BigFraction add(BigFraction o) {
         return new BigFraction(num.multiply(o.den).add(o.num.multiply(den)),
                               den.multiply(o.den));
@@ -70,10 +72,12 @@ public final class BigFraction implements Comparable<BigFraction> {
         return num.intValueExact();
     }
 
+    // Returns -1, 0, or 1 as this fraction is negative, zero, or positive.
     public int signum() {
         return num.signum();
     }
 
+    //basic getters 
     public BigInteger numerator() {
         return num;
     }
@@ -82,22 +86,29 @@ public final class BigFraction implements Comparable<BigFraction> {
         return den;
     }
 
+    //toString
     @Override public String toString() {
         return den.equals(BigInteger.ONE) ? num.toString()
                                          : num + "/" + den;
     }
 
+    // equality  
     @Override public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof BigFraction)) return false;
-        BigFraction that = (BigFraction) o;
+        if (!(o instanceof BigFraction)) return false; // o cant be reduced to BigFraction
+        BigFraction that = (BigFraction) o; //o can be reduced to BigFraction, so do it
         return num.equals(that.num) && den.equals(that.den);
     }
 
+    //hash code for use in hash-based collections
     @Override public int hashCode() {
         return Objects.hash(num, den);
     }
 
+    //to compare two fractions
+    // Returns a negative integer → this < o
+    // Returns 0 → this == o
+    // Returns a positive integer → this > o
     @Override public int compareTo(BigFraction o) {
         return num.multiply(o.den).compareTo(o.num.multiply(den));
     }

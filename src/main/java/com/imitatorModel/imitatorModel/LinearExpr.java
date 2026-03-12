@@ -5,23 +5,23 @@ import java.util.List;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public class LinearTerm {
+public class LinearExpr {
     private List<Pair<Variable, BigFraction>> terms;
     private BigFraction constant;
 
-    public LinearTerm(BigFraction constant) {
+    public LinearExpr(BigFraction constant) {
         this.terms = new ArrayList<>();
         this.constant = constant;
     }
 
-    public LinearTerm(Variable v) {
+    public LinearExpr(Variable v) {
         this.terms = new ArrayList<>();
         this.constant = BigFraction.ZERO;
         addTerm(v, BigFraction.ONE);
     }
 
 
-    public LinearTerm(Variable v, BigFraction c) {
+    public LinearExpr(Variable v, BigFraction c) {
         this.terms = new ArrayList<>();
         this.constant = c;
         addTerm(v, c);
