@@ -18,4 +18,9 @@ public class Action {
    public String toIMITATOR(){
        return getName();
    }
+    
+   @Override
+    public String toString() {
+        return getName();
+    }
 }

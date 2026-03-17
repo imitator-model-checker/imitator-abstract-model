@@ -11,7 +11,7 @@ public class LinearExpr {
 
     public LinearExpr(BigFraction constant) {
         this.terms = new ArrayList<>();
-        this.constant = constant;
+        addConstant(constant);
     }
 
     public LinearExpr(Variable v) {
@@ -27,10 +27,25 @@ public class LinearExpr {
         addTerm(v, c);
     }
 
+    public LinearExpr(List<Variable> variables, List<BigFraction> coefficients, BigFraction constant) {
+        this.terms = new ArrayList<>();
+        this.constant = BigFraction.ZERO;
+        for (int i = 0; i < variables.size(); i++) {
+            addTerm(variables.get(i), coefficients.get(i));
+        }
+        addConstant(constant);
+    }
+
 
     public void addTerm(Variable variable, BigFraction coefficient) {
         terms.add(new Pair<>(variable, coefficient));
     }
+
+    public void addConstant(BigFraction c) {
+        this.constant = c;
+    }
+
+    // getter methods
 
     public List<Pair<Variable, BigFraction>> getTerms() {
         return terms;
@@ -40,7 +55,7 @@ public class LinearExpr {
         return constant;
     }
 
-// Method to format the linear term as specified
+    // Method to format the linear term as specified
     public String toIMITATOR() {
         StringBuilder sb = new StringBuilder();
 

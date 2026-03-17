@@ -1,17 +1,12 @@
 package com.imitatorModel.imitatorModel;
 
-import java.util.List;
-import java.util.ArrayList;
-
-import javax.swing.SpringLayout.Constraints;
-
 public class Transition {
     private ConjunctionOfConstraints guard;
     private Action action = null;
-    private List<Update> updates;
+    private ListUpdates updates;
     private Location to;
 
-    public Transition(ConjunctionOfConstraints guard, Action action, List<Update> updates, Location to) {
+    public Transition(ConjunctionOfConstraints guard, Action action, ListUpdates updates, Location to) {
         this.guard = guard;
         this.action = action;
         this.updates = updates;
@@ -19,20 +14,20 @@ public class Transition {
     }
 
 
-    public Transition(Action action, Location to) {
-        this.action = action;
-        this.to = to;
-        this.updates = new ArrayList<>();
-        this.guard = new ConjunctionOfConstraints();
-    }
+    // public Transition(Action action, Location to) {
+    //     this.action = action;
+    //     this.to = to;
+    //     this.updates = new ArrayList<>();
+    //     this.guard = new ConjunctionOfConstraints();
+    // }
 
-    public void addUpdate(Update update){
-        this.updates.add(update);
-    }
+    // public void addUpdate(Update update){
+    //     this.updates.add(update);
+    // }
 
-    public void addConstraint(String constraint){
-        this.guard.add(constraint);
-    }
+    // public void addConstraint(String constraint){
+    //     this.guard.add(constraint);
+    // }
 
     public ConjunctionOfConstraints getGuard() {
         return guard;
@@ -42,7 +37,7 @@ public class Transition {
         return action;
     }
 
-    public List<Update> getUpdates() {
+    public ListUpdates getUpdates() {
         return updates;
     }
 
@@ -59,18 +54,9 @@ public class Transition {
         if (action != null) {
             sb.append(" sync " + action.toIMITATOR());
         }
-        if(!updates.isEmpty()){
-            StringBuilder sb_updates = new StringBuilder();
 
-            for (int i = 0; i < updates.size(); i++) {
-                sb_updates.append(updates.get(i).toIMITATOR());
+        sb.append(updates.toIMITATOR());
 
-                if (i < updates.size() - 1) {
-                    sb_updates.append("; ");
-                }
-            }
-            sb.append(" do {" + sb_updates.toString() + "}");
-        }
         sb.append(" goto " + to.nameToIMITATOR() + ";");
         return sb.toString();
 	}

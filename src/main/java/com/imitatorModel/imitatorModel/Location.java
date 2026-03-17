@@ -18,6 +18,38 @@ public class Location {
         isUrgent = false;
     }
 
+    public Location(String name, ConjunctionOfConstraints invariant) {
+        this.name = name;
+        this.invariant = invariant;
+        this.transitions = new ArrayList<Transition>();
+        this.rate = new ArrayList<>();
+        isUrgent = false;
+    }
+
+    public Location(String name, Boolean isUrgent) {
+        this.name = name;
+        this.invariant = new ConjunctionOfConstraints();
+        this.transitions = new ArrayList<Transition>();
+        this.rate = new ArrayList<>();
+        this.isUrgent = isUrgent;
+    }
+
+    public Location(String name, ConjunctionOfConstraints invariant, Boolean isUrgent) {
+        this.name = name;
+        this.invariant = invariant;
+        this.transitions = new ArrayList<Transition>();
+        this.rate = new ArrayList<>();
+        this.isUrgent = isUrgent;
+    }
+
+    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<Variable, LinearExpr>> rate, Boolean isUrgent) {
+        this.name = name;
+        this.invariant = invariant;
+        this.transitions = new ArrayList<Transition>();
+        this.rate = rate;
+        this.isUrgent = isUrgent;
+    }
+
     public String getName() {
         return name;
     }

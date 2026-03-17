@@ -1,5 +1,9 @@
 package com.imitatorModel.imitatorModel;
 
+import javax.sound.sampled.Line;
+
+import com.imitatorModel.bigFraction.BigFraction;
+
 public class Constraint {
     // private String constraint;
 
@@ -11,24 +15,44 @@ public class Constraint {
     //     return constraint;
     // }
 
-    // private LinearExpr term;
-    // private Operator operator;
+    private LinearExpr leftTerm;
+    private Operator operator;
+    private LinearExpr rightTerm;
 
-    // public Constraint(LinearExpr term, Operator operator) {
-    //     this.term = term;
-    //     this.operator = operator;
-    // }
+    public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm) {
+        this.leftTerm = leftTerm;
+        this.operator = operator;
+        this.rightTerm = rightTerm;
+    }
 
-    // public LinearExpr getTerm() {
-    //     return term;
-    // }
+    public Constraint(LinearExpr leftTerm,  Operator operator) {
+        this.leftTerm = leftTerm;
+        this.operator = operator;
+        this.rightTerm = new LinearExpr(BigFraction.ZERO);
+    }
 
-    // public Operator getOperator() {
-    //     return operator;
-    // }
+    public Constraint(Operator operator, LinearExpr rightTerm) {
+        this.leftTerm = new LinearExpr(BigFraction.ZERO);
+        this.operator = operator;
+        this.rightTerm = rightTerm;
+    }
 
-	// public String toIMITATOR(){
-	// 	return term.toIMITATOR() + " " + operator.toIMITATOR() + " 0";
-	// }
+
+
+    public LinearExpr getLeftTerm() {
+        return leftTerm;
+    }
+
+    public Operator getOperator() {
+        return operator;
+    }
+
+    public LinearExpr getRightTerm() {
+        return rightTerm;
+    }
+
+	public String toIMITATOR(){
+		return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
+	}
 
 }
