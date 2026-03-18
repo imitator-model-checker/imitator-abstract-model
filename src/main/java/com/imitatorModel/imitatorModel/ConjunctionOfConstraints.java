@@ -4,34 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ConjunctionOfConstraints {
-    // private String constraints;
-
-
-    // public ConjunctionOfConstraints(String constraints) {
-    //     this.constraints = constraints;
-    // }
-
-    // public ConjunctionOfConstraints() {
-    //     this.constraints = "";
-    // }
-
-    // public void add(String constraint){
-    //     if (this.constraints == ""){
-    //         this.constraints = constraint;
-    //     }else{
-    //         this.constraints += " & " + constraint;
-    //     }
-    // }
-
-	// public String toIMITATOR(){
-    //     if (constraints == ""){
-    //         return "True";
-    //     }
-    //     else{
-    //         return constraints;
-	//     }
-    // }
-
 
     private List<Constraint> constraints;
 
