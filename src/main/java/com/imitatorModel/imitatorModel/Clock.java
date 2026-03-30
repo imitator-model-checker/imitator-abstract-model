@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-public class Clock extends Variable {
+public class Clock extends VariableType {
     public Clock(String name) {
         super(name);
     }

@@ -1,12 +1,13 @@
 package com.imitatorModel.imitatorModel;
 
-public abstract class Variable {
+public abstract class VariableType {
     private String name;
 
-    public Variable(String name) {
+    public VariableType(String name) {
         this.name = name;
     }
 
+    
     public abstract String getIMITATORType();
 
     public String getName() {

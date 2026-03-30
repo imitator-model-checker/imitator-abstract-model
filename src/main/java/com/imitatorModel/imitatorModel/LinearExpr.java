@@ -6,48 +6,49 @@ import java.util.List;
 import com.imitatorModel.bigFraction.BigFraction;
 
 public class LinearExpr {
-    private List<Pair<Variable, BigFraction>> terms;
+    private List<Pair<VariableType, BigFraction>> terms;
     private BigFraction constant;
 
     public LinearExpr(BigFraction constant) {
         this.terms = new ArrayList<>();
-        addConstant(constant);
+        this.constant = constant;
     }
 
-    public LinearExpr(Variable v) {
+    public LinearExpr(VariableType v) {
         this.terms = new ArrayList<>();
         this.constant = BigFraction.ZERO;
         addTerm(v, BigFraction.ONE);
     }
 
 
-    public LinearExpr(Variable v, BigFraction c) {
+    public LinearExpr(VariableType v, BigFraction c) {
         this.terms = new ArrayList<>();
-        this.constant = c;
         addTerm(v, c);
     }
 
-    public LinearExpr(List<Variable> variables, List<BigFraction> coefficients, BigFraction constant) {
+    public LinearExpr(VariableType v, BigFraction c,  BigFraction constant) {
         this.terms = new ArrayList<>();
-        this.constant = BigFraction.ZERO;
+        this.constant = constant;
+        addTerm(v, c);
+    }
+
+    public LinearExpr(List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
+        this.terms = new ArrayList<>();
+        this.constant = constant;
         for (int i = 0; i < variables.size(); i++) {
             addTerm(variables.get(i), coefficients.get(i));
         }
-        addConstant(constant);
     }
 
 
-    public void addTerm(Variable variable, BigFraction coefficient) {
+    public void addTerm(VariableType variable, BigFraction coefficient) {
         terms.add(new Pair<>(variable, coefficient));
     }
 
-    public void addConstant(BigFraction c) {
-        this.constant = c;
-    }
 
     // getter methods
 
-    public List<Pair<Variable, BigFraction>> getTerms() {
+    public List<Pair<VariableType, BigFraction>> getTerms() {
         return terms;
     }
 
@@ -61,7 +62,7 @@ public class LinearExpr {
 
         // Append each term in the form coef * variable
         for (int i = 0; i < terms.size(); i++) {
-            Pair<Variable, BigFraction> term = terms.get(i);
+            Pair<VariableType, BigFraction> term = terms.get(i);
             BigFraction coefficient = term.getSecond();
             String variableName = term.getFirst().getName();
 

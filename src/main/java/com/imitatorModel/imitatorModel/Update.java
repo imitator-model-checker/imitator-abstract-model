@@ -7,32 +7,32 @@ import com.imitatorModel.bigFraction.BigFraction;
 public class Update {
 
     private ConjunctionOfConstraints condition;        // allows to have conditional updates, e.g., if (x > 0) then x := x + 1 else x := x - 1
-    private Variable variable;
+    private VariableType variable;
     private LinearExpr term;
 
-    public Update(Variable variable, LinearExpr term) {
+    public Update(VariableType variable, LinearExpr term) {
         this.variable = variable;
         this.term = term;
     }
 
-    public Update(Variable variable, List<Variable> variables, List<BigFraction> coefficients, BigFraction constant) {
+    public Update(VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
         this.variable = variable;
         this.term = new LinearExpr(variables, coefficients, constant);
     }
 
-    public Update(ConjunctionOfConstraints condition, Variable variable, LinearExpr term) {
+    public Update(ConjunctionOfConstraints condition, VariableType variable, LinearExpr term) {
         this.condition = condition;
         this.variable = variable;
         this.term = term;
     }
 
-    public Update(ConjunctionOfConstraints condition, Variable variable, List<Variable> variables, List<BigFraction> coefficients, BigFraction constant) {
+    public Update(ConjunctionOfConstraints condition, VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
         this.condition = condition;
         this.variable = variable;
         this.term = new LinearExpr(variables, coefficients, constant);
     }
 
-    public Variable getVariable() {
+    public VariableType getVariable() {
         return variable;
     }
 

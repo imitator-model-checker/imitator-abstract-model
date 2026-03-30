@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-public class Parameter extends Variable {
+public class Parameter extends VariableType {
     public Parameter(String name) {
         super(name);
     }

@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-public class Rational extends Variable {
+public class Rational extends VariableType {
     public Rational(String name) {
         super(name);
     }

@@ -3,6 +3,7 @@ package com.imitatorModel.bigFraction;
 
 import java.math.BigInteger;
 import java.util.Objects;
+import java.util.Random;
 
 /**
  * Immutable rational number (numerator / denominator) with automatic reduction.
@@ -112,4 +113,16 @@ public final class BigFraction implements Comparable<BigFraction> {
     @Override public int compareTo(BigFraction o) {
         return num.multiply(o.den).compareTo(o.num.multiply(den));
     }
+
+    // return a positive random BigFraction in [0, 1] given denominator 
+    public static BigFraction random(int denominator) {
+        if (denominator <= 0) {
+            throw new IllegalArgumentException("Denominator must be positive");
+        }
+
+        int numerator = new Random().nextInt(denominator-1) + 1; // random integer in [1, denominator-1]
+
+        return new BigFraction(numerator, denominator);
+    }
+
 }

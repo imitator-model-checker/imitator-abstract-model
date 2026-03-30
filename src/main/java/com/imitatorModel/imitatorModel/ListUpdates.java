@@ -14,7 +14,7 @@ public class ListUpdates {
     }
 
     public ListUpdates() {
-        this.updates =  this.updates = List.of(); 
+        this.updates =  List.of(); 
     }
 
     public List<Update> getUpdates() {

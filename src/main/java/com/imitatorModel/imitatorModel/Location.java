@@ -5,49 +5,44 @@ import java.util.List;
 
 public class Location {
     private String name;
-    private ConjunctionOfConstraints invariant;
-    private List<Pair<Variable, LinearExpr>> rate;
-    private List<Transition> transitions;
-    private Boolean isUrgent;
+    private ConjunctionOfConstraints invariant ;
+    private List<Pair<VariableType, LinearExpr>> rate;
+    private List<Transition> transitions = new ArrayList<>();
+    private Boolean isUrgent ;
+
+    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
+        this.name = name;
+        this.invariant = (invariant != null) ? invariant : new ConjunctionOfConstraints();
+        this.rate = (rate != null) ? rate : new ArrayList<>();
+        this.isUrgent = (isUrgent != null) ? isUrgent : false;
+    }
 
     public Location(String name) {
-        this.name = name;
-        this.invariant = new ConjunctionOfConstraints();
-        this.transitions = new ArrayList<Transition>();
-        this.rate = new ArrayList<>();
-        isUrgent = false;
+        this(name, null, null, null);
     }
 
     public Location(String name, ConjunctionOfConstraints invariant) {
-        this.name = name;
-        this.invariant = invariant;
-        this.transitions = new ArrayList<Transition>();
-        this.rate = new ArrayList<>();
-        isUrgent = false;
+        this(name, invariant, null, null);
     }
 
     public Location(String name, Boolean isUrgent) {
-        this.name = name;
-        this.invariant = new ConjunctionOfConstraints();
-        this.transitions = new ArrayList<Transition>();
-        this.rate = new ArrayList<>();
-        this.isUrgent = isUrgent;
+        this(name, null, null, isUrgent);
+    }
+
+    public Location(String name, List<Pair<VariableType, LinearExpr>> rate) {
+        this(name, null, rate, null);
     }
 
     public Location(String name, ConjunctionOfConstraints invariant, Boolean isUrgent) {
-        this.name = name;
-        this.invariant = invariant;
-        this.transitions = new ArrayList<Transition>();
-        this.rate = new ArrayList<>();
-        this.isUrgent = isUrgent;
+        this(name, invariant, null, isUrgent );
     }
 
-    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<Variable, LinearExpr>> rate, Boolean isUrgent) {
-        this.name = name;
-        this.invariant = invariant;
-        this.transitions = new ArrayList<Transition>();
-        this.rate = rate;
-        this.isUrgent = isUrgent;
+    public Location(String name, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
+        this(name, null, rate, null );
+    }
+
+    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<VariableType, LinearExpr>> rate) {
+        this(name, invariant, rate, null );
     }
 
     public String getName() {
@@ -58,12 +53,21 @@ public class Location {
         return isUrgent;
     }
 
-    public void setInvariant( ConjunctionOfConstraints invariant){
-        this.invariant = invariant;
-    }
-
     public ConjunctionOfConstraints getInvariant() {
         return invariant;
+    }
+
+
+    public List<Transition> getTransitions() {
+        return transitions;
+    }
+
+    public List<Pair<VariableType, LinearExpr>> getRate(){
+        return rate;
+    }
+
+    public void setInvariant( ConjunctionOfConstraints invariant){
+        this.invariant = invariant;
     }
 
     public void setUrgent() {
@@ -79,16 +83,8 @@ public class Location {
         transitions.addAll(transitions);
     }
 
-    public List<Transition> getTransitions() {
-        return transitions;
-    }
-
-    public void addRate(Variable variable, LinearExpr linearTerm) {
+    public void addRate(VariableType variable, LinearExpr linearTerm) {
         rate.add(new Pair<>(variable, linearTerm));
-    }
-
-    public List<Pair<Variable, LinearExpr>> getRate() {
-        return rate;
     }
 
 	public String nameToIMITATOR(){
@@ -106,7 +102,7 @@ public class Location {
         if(!rate.isEmpty()){
             sb.append(" flow{");
             for (int i = 0; i < rate.size(); i++) {
-                Variable variable = rate.get(i).getFirst();
+                VariableType variable = rate.get(i).getFirst();
                 LinearExpr lt = rate.get(i).getSecond();
                 sb.append(variable.toIMITATOR() + "' = " + lt.toIMITATOR());
 

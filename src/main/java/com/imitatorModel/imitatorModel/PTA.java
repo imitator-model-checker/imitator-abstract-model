@@ -1,18 +1,20 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PTA {
-    private List<Location> locations;
-    private List<Action> actions;
+    private Set<Location> locations;
+    private Set<Action> actions;
     private String name;
     private Location initial_location;
 
     public PTA(String name) {
 		this.name = name;
-        this.locations = new ArrayList<>();
-        this.actions = new ArrayList<>();
+        this.locations = new HashSet<>();
+        this.actions = new HashSet<>();
     }
 
     public Location getInitialLocation(){
@@ -35,11 +37,11 @@ public class PTA {
         this.actions.addAll(actions);
     }
 
-    public List<Location> getLocations() {
+    public Set<Location> getLocations() {
         return locations;
     }
 
-    public List<Action> getActions() {
+    public Set<Action> getActions() {
         return actions;
     }
 

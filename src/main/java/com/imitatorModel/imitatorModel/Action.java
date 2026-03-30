@@ -10,9 +10,9 @@ public class Action {
    }
 
 
-   public String getName() {
-       return name;
-   }
+    public String getName() {
+        return name;
+    }
 
 
    public String toIMITATOR(){

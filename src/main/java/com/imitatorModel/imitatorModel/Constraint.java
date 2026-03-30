@@ -1,7 +1,5 @@
 package com.imitatorModel.imitatorModel;
 
-import javax.sound.sampled.Line;
-
 import com.imitatorModel.bigFraction.BigFraction;
 
 public class Constraint {

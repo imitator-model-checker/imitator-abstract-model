@@ -13,7 +13,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ImitatorModel {
-    private List<Variable> variables;
+    private List<VariableType> variables;
     private List<PTA> ptas;
 
     public ImitatorModel() {
@@ -21,11 +21,11 @@ public class ImitatorModel {
         this.ptas = new ArrayList<>();
     }
 
-    public void addVariable(Variable variable) {
+    public void addVariable(VariableType variable) {
         variables.add(variable);
     }
 
-    public void addVariables(List<Variable> variables) {
+    public void addVariables(List<VariableType> variables) {
         variables.addAll(variables);
     }
 
@@ -33,7 +33,7 @@ public class ImitatorModel {
         ptas.add(pta);
     }
 
-    public List<Variable> getVariables() {
+    public List<VariableType> getVariables() {
         return variables;
     }
 
@@ -78,7 +78,7 @@ public class ImitatorModel {
 
 		// Variables declaration
 		sb.append("var");
-        for (Variable variable : variables) {
+        for (VariableType variable : variables) {
             sb.append("\n\t" + variable.toIMITATOR() + ": " + variable.getIMITATORType() + ";");  // Adding a newline after each location for readability
         }
         sb.append("\n");
@@ -107,7 +107,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Initial discrete variables assignments *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
-        for (Variable v : variables) {
+        for (VariableType v : variables) {
             if(v.is_discrete_initially_0()) {
                 sb.append("\t " + v.toIMITATOR() + " <- 0,\n");
             }
@@ -118,7 +118,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Initial clock constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
-        for (Variable v : variables) {
+        for (VariableType v : variables) {
             if(v.is_continuous_initially_0()) {
                 sb.append("\t & " + v.toIMITATOR() + " = 0\n");
             }
