@@ -32,7 +32,7 @@ public class LinearExpr {
         addTerm(v, c);
     }
 
-    public LinearExpr(List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
+    public LinearExpr(List<? extends VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
         this.terms = new ArrayList<>();
         this.constant = constant;
         for (int i = 0; i < variables.size(); i++) {

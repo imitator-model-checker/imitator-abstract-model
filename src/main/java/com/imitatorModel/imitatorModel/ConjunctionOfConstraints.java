@@ -18,7 +18,8 @@ public class ConjunctionOfConstraints {
     }
 
     public ConjunctionOfConstraints(List<Constraint> constraints) {
-        this.constraints = constraints;
+        this.constraints =  new ArrayList<Constraint>();
+        this.constraints.addAll(constraints);
     }
 
     public void addConstraint(Constraint constraint){

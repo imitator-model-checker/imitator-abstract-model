@@ -1,7 +1,8 @@
 package com.imitatorModel.imitatorModel;
 
-import java.util.ArrayList;
+// import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -13,7 +14,7 @@ public class PTA {
 
     public PTA(String name) {
 		this.name = name;
-        this.locations = new HashSet<>();
+        this.locations = new LinkedHashSet<>();
         this.actions = new HashSet<>();
     }
 
