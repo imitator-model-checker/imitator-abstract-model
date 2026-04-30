@@ -1,24 +1,30 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ListUpdates {
-    private List<Update> updates;
+    private ArrayList<Update> updates;
 
-    public ListUpdates(List<Update> updates) {
+    public ListUpdates(ArrayList<Update> updates) {
         this.updates = updates;
     }
 
     public ListUpdates(Update update) {
-        this.updates = List.of(update);
+        this.updates = new ArrayList<Update>();
+        this.updates.add(update);
     }
 
     public ListUpdates() {
-        this.updates =  List.of(); 
+        this.updates =  new ArrayList<Update>(); 
     }
 
     public List<Update> getUpdates() {
         return updates;
+    }
+
+    public void addUpdate (Update update){
+        this.updates.add(update);
     }
 
     public String toIMITATOR() {

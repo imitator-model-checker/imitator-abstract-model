@@ -34,7 +34,7 @@ public class ConjunctionOfConstraints {
         return constraints;
     }
 
-	public String toIMITATOR(){
+	public String toIMITATOR(){          // only support & because imitator guard doesnt support OR
         if (constraints.isEmpty()){
             return "True";
         }else{

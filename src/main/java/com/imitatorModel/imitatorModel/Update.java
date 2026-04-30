@@ -42,7 +42,7 @@ public class Update {
 
     public String toIMITATOR() {
         if (condition != null) {
-            return "if " + condition + " then " + variable.toIMITATOR() + " <- " + term.toIMITATOR() + " end ";
+            return "if " + condition.toIMITATOR()  + " then " + variable.toIMITATOR() + " <- " + term.toIMITATOR() + " end ";
         }
         else {  
             return variable.toIMITATOR() + " <- " + term.toIMITATOR();

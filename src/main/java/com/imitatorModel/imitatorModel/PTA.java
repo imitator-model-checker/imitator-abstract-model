@@ -34,7 +34,7 @@ public class PTA {
         actions.add(action);
     }
 
-    public void addActions(List<Action> actions) {
+    public void addActions(Set<Action> actions) {
         this.actions.addAll(actions);
     }
 

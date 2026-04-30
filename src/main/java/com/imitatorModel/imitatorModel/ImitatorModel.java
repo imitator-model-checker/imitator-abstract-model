@@ -22,15 +22,19 @@ public class ImitatorModel {
     }
 
     public void addVariable(VariableType variable) {
-        variables.add(variable);
+        this.variables.add(variable);
     }
 
     public void addVariables(List<VariableType> variables) {
-        variables.addAll(variables);
+        this.variables.addAll(variables);
     }
 
     public void addPTA(PTA pta) {
-        ptas.add(pta);
+        this.ptas.add(pta);
+    }
+
+    public void addPTAs(List<PTA> ptas) {
+        this.ptas.addAll(ptas);
     }
 
     public List<VariableType> getVariables() {
@@ -60,6 +64,18 @@ public class ImitatorModel {
         return rational;
     }
 
+
+    public ImitatorModel mergeModel(ImitatorModel other) {
+        ImitatorModel result = new ImitatorModel();
+
+        result.addVariables(this.variables);
+        result.addVariables(other.variables);
+
+        result.addPTAs(this.ptas);
+        result.addPTAs(other.ptas);
+
+        return result;
+    }
 
 
     public String toIMITATOR() {
