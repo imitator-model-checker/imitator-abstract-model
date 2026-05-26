@@ -6,15 +6,15 @@ import java.util.Set;
 
 public class Location {
     private String name;
-    private ConjunctionOfConstraints invariant ;
+    private ComplexConstraint invariant ;
     private List<Pair<VariableType, LinearExpr>> rate;
     private List<Transition> transitions = new ArrayList<>();
     private Boolean isUrgent ;
     private List<Clock> stop ;
 
-    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
+    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
         this.name = name;
-        this.invariant = (invariant != null) ? invariant : new ConjunctionOfConstraints();
+        this.invariant = (invariant != null) ? invariant : new ComplexConstraint();
         this.rate = (rate != null) ? rate : new ArrayList<>();
         this.isUrgent = (isUrgent != null) ? isUrgent : false;
         this.stop = new ArrayList<>();
@@ -24,7 +24,7 @@ public class Location {
         this(name, null, null, null);
     }
 
-    public Location(String name, ConjunctionOfConstraints invariant) {
+    public Location(String name, ComplexConstraint invariant) {
         this(name, invariant, null, null);
     }
 
@@ -36,7 +36,7 @@ public class Location {
         this(name, null, rate, null);
     }
 
-    public Location(String name, ConjunctionOfConstraints invariant, Boolean isUrgent) {
+    public Location(String name, ComplexConstraint invariant, Boolean isUrgent) {
         this(name, invariant, null, isUrgent );
     }
 
@@ -44,7 +44,7 @@ public class Location {
         this(name, null, rate, null );
     }
 
-    public Location(String name, ConjunctionOfConstraints invariant, List<Pair<VariableType, LinearExpr>> rate) {
+    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate) {
         this(name, invariant, rate, null );
     }
 
@@ -64,7 +64,7 @@ public class Location {
         return isUrgent;
     }
 
-    public ConjunctionOfConstraints getInvariant() {
+    public ComplexConstraint getInvariant() {
         return invariant;
     }
 
@@ -77,7 +77,7 @@ public class Location {
         return rate;
     }
 
-    public void setInvariant( ConjunctionOfConstraints invariant){
+    public void setInvariant( ComplexConstraint invariant){
         this.invariant = invariant;
     }
 
@@ -113,6 +113,11 @@ public class Location {
 	}
 
 	public String toIMITATOR(){
+        // need this function because imitator guard doesnt support OR under any circumsance, so we need to raise error if we have disjunction in invariant
+        if(invariant.haveDisjunction()){
+            throw new IllegalStateException("Invariant contains disjunction, which is not supported in IMITATOR");
+        }
+
         StringBuilder sb = new StringBuilder();
 
         if(isUrgent){

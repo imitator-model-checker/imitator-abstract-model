@@ -1,7 +1,9 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.Objects;
+
 public abstract class VariableType {
-    private String name;
+    private final String name;
 
     public VariableType(String name) {
         this.name = name;
@@ -13,6 +15,21 @@ public abstract class VariableType {
     public String getName() {
         return name;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof VariableType)) return false;
+
+        VariableType other = (VariableType) o;
+        return Objects.equals(name, other.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
 
     // True if need to be added to the initial state with continuous value 0
     public Boolean is_continuous_initially_0(){return false;}

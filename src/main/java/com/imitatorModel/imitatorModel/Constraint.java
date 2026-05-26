@@ -3,16 +3,6 @@ package com.imitatorModel.imitatorModel;
 import com.imitatorModel.bigFraction.BigFraction;
 
 public class Constraint {
-    // private String constraint;
-
-    // public Constraint(String constraint) {
-    //     this.constraint = constraint;
-    // }
-
-    // public String toIMITATOR(){
-    //     return constraint;
-    // }
-
     private LinearExpr leftTerm;
     private Operator operator;
     private LinearExpr rightTerm;

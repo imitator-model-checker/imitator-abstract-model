@@ -5,7 +5,9 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,19 +15,21 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ImitatorModel {
-    private List<VariableType> variables;
+    // private List<VariableType> variables;
+    private Set<VariableType> variables;
     private List<PTA> ptas;
 
     public ImitatorModel() {
-        this.variables = new ArrayList<>();
-        this.ptas = new ArrayList<>();
+        // this.variables = new ArrayList<>();
+        this.variables = new HashSet<VariableType>();
+        this.ptas = new ArrayList<PTA>();
     }
 
     public void addVariable(VariableType variable) {
         this.variables.add(variable);
     }
 
-    public void addVariables(List<VariableType> variables) {
+    public void addVariables(Set<VariableType> variables) {
         this.variables.addAll(variables);
     }
 
@@ -37,7 +41,7 @@ public class ImitatorModel {
         this.ptas.addAll(ptas);
     }
 
-    public List<VariableType> getVariables() {
+    public Set<VariableType> getVariables() {
         return variables;
     }
 
