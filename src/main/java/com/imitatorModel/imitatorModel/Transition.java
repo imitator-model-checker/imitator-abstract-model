@@ -74,107 +74,48 @@ public class Transition {
         return to;
     }
 
-    public static List<List<Integer>> toDNF(
-            List<LogicalOperator> operators
-    ) {
 
-        // Initially: operand 0
-        List<List<Integer>> dnf = new ArrayList<>();
-
-        List<Integer> firstClause = new ArrayList<>();
-        firstClause.add(0);
-
-        dnf.add(firstClause);
-
-        // Process operators left-to-right
-        for (int i = 0; i < operators.size(); i++) {
-
-            LogicalOperator op = operators.get(i);
-            int nextOperand = i + 1;
-
-            if (op == LogicalOperator.OR) {
-
-                // OR: create new clause
-                List<Integer> newClause = new ArrayList<>();
-                newClause.add(nextOperand);
-
-                dnf.add(newClause);
-
-            } else if (op == LogicalOperator.AND) {
-
-                // AND: append operand to every clause
-                for (List<Integer> clause : dnf) {
-                    clause.add(nextOperand);
-                }
-            }
-        }
-
-        return dnf;
-    }
 
     public String toIMITATOR() {
         StringBuilder sb = new StringBuilder();
         // Imitator doesnt support having disjunction in the guards
         // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
-        // if (guard.haveDisjunction()) {
-        //         List<Constraint> constraints = guard.getConstraints();
-        //         List<LogicalOperator> operators = guard.getOperators();
-
-        //         List<Integer> indicesToRemove = new ArrayList<>();
-
-        //         for (int i = 0; i < operators.size(); i++) {
-        //             if (operators.get(i) == LogicalOperator.OR) {
-        //                 indicesToRemove.add(i);
-        //                 Transition newTransi = new Transition(new ComplexConstraint(constraints.get(i+1)),this.action, this.updates, this.to);
-        //                 sb.append(newTransi.toIMITATOR());
-        //             }
-        //         }
-
-        //         for (int i = indicesToRemove.size() - 1; i >= 0; i--) {
-        //                 int index = indicesToRemove.get(i);
-        //                 operators.remove(index);
-        //                 constraints.remove(index+1);
-        //         }
-
-        //     }
         if (this.guard.haveDisjunction()) {
+            List<Constraint> constraints = this.guard.getConstraints();
+            List<LogicalOperator> operators = this.guard.getOperators();
 
-        //     List<Constraint> constraints = this.guard.getConstraints();
-        //     List<LogicalOperator> operators = this.guard.getOperators();
 
-        //     Set<Constraint> sharedAndConstraints = new HashSet<Constraint>();
-        //     Set<Constraint> orConstraints = new HashSet<Constraint>();
+            Set<Constraint> sharedAndConstraints = new HashSet<Constraint>();
+            Set<Constraint> orConstraints = new HashSet<Constraint>();
 
-        //     // // First constraint
-        //     // sharedAndConstraints.add(constraints.get(0));
 
-        //     for (int i = 0; i < operators.size(); i++) {
+            // // First constraint
+            // sharedAndConstraints.add(constraints.get(0));
 
-        //         LogicalOperator op = operators.get(i);
-        //         Constraint curConstraint = constraints.get(i );
-        //         Constraint nextConstraint = constraints.get(i + 1);
 
-        //         if (op == LogicalOperator.OR) {
-        //             orConstraints.add(curConstraint);
-        //             orConstraints.add(nextConstraint);
-        //         } else if (op == LogicalOperator.AND) {
-        //             sharedAndConstraints.add(curConstraint);
-        //         }
-        //     }
+            for (int i = 0; i < operators.size(); i++) {
 
-        //     // Create one transition for each OR constraint
-            List<List<Integer>> dnf = toDNF(this.guard.getOperators());
-            for (List<Integer> clause : dnf) {
 
-                // Build AND-list of constraints for this DNF clause
-                List<Constraint> newList = new ArrayList<>();
+                LogicalOperator op = operators.get(i);
+                Constraint curConstraint = constraints.get(i );
+                Constraint nextConstraint = constraints.get(i + 1);
 
-                for (Integer index : clause) {
-                    newList.add(this.guard.getConstraints().get(index));
-                }
 
-                // Construct conjunction constraint
-                ComplexConstraint newGuard = new ComplexConstraint(newList);
+                if (op == LogicalOperator.OR) {
+                    orConstraints.add(curConstraint);
+                    orConstraints.add(nextConstraint);
+                } else if (op == LogicalOperator.AND) {
+                    sharedAndConstraints.add(curConstraint);
+                }  
+            }
+            
+                // Create one transition for each OR constraint
+            for (Constraint orConstraint : orConstraints) {
+
+                List<Constraint> combined = new ArrayList<>(sharedAndConstraints);
+                combined.add(orConstraint);
+
+                ComplexConstraint newGuard = new ComplexConstraint(combined);
 
                 Transition newTransi = new Transition(
                         newGuard,

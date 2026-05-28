@@ -14,8 +14,39 @@ public class ComplexConstraint {
     private List<Constraint> constraints = new ArrayList<Constraint>();
     private  List<LogicalOperator> operators = new ArrayList<LogicalOperator>(); 
 
+        /*
+    For our implementation, because there is no mechanism to deal with bracket and order of operation, we need to keep the invariant that 
+    AND will never follow after an OR. This makes the translation to imitator model later easier. 
+    */
+
+
+    public static boolean hasAndAfterOr(
+            List<LogicalOperator> operators) {
+
+        boolean foundOr = false;
+
+        for (LogicalOperator operator : operators) {
+
+            if (operator == LogicalOperator.OR) {
+                foundOr = true;
+            }
+
+            if (foundOr
+                    && operator == LogicalOperator.AND) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public ComplexConstraint() {
 
+    }
+
+    public ComplexConstraint(ComplexConstraint complexConstraint) {
+        this.constraints = new ArrayList<>(complexConstraint.getConstraints());
+        this.operators = new ArrayList<>(complexConstraint.getOperators());
     }
 
     public ComplexConstraint(Constraint constraint) {
@@ -28,6 +59,10 @@ public class ComplexConstraint {
         }
         this.constraints.addAll(constraints);
         this.operators.addAll(operators);
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        }
     }
 
     public ComplexConstraint(List<Constraint> constraints) {
@@ -52,6 +87,10 @@ public class ComplexConstraint {
             this.constraints.add(newConstraint);  
             this.operators.add(operator);
         }
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        }
     }
 
     public void addConstraint(Constraint newConstraint){
@@ -63,6 +102,10 @@ public class ComplexConstraint {
         else {
             this.constraints.add(newConstraint); 
             this.operators.add(LogicalOperator.AND); 
+        }
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
         }
     }
 
@@ -81,6 +124,10 @@ public class ComplexConstraint {
             this.constraints.addAll(constraints);
             this.operators.addAll(operators);
         }
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        }
     }
 
     public void addConstraints(List<Constraint> constraints){
@@ -91,6 +138,10 @@ public class ComplexConstraint {
          else {
             this.constraints.addAll(constraints);
             this.operators.addAll(Collections.nCopies(constraints.size(), LogicalOperator.AND));
+        }
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
         }
     }
 
@@ -105,7 +156,9 @@ public class ComplexConstraint {
             this.operators.addAll(complexConstraint.getOperators());
         }
 
-
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        }
     }
 
     public void addConstraints(ComplexConstraint complexConstraint){
@@ -117,6 +170,10 @@ public class ComplexConstraint {
             this.constraints.addAll(complexConstraint.getConstraints());
             this.operators.add(LogicalOperator.AND);
             this.operators.addAll(complexConstraint.getOperators());
+        }
+
+        if (hasAndAfterOr(this.operators) == true){
+           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
         }
     }
 
