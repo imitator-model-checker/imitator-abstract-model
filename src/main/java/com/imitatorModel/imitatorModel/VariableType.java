@@ -2,7 +2,7 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.Objects;
 
-public abstract class VariableType {
+public abstract class VariableType{
     private final String name;
 
     public VariableType(String name) {

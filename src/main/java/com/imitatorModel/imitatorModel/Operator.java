@@ -23,11 +23,11 @@ public enum Operator {
 
     public  Operator getInverse() {
         switch (this) {
-            case LT: return GT;
-            case LE: return GE;
+            case LT: return GE;
+            case LE: return GT;
             case EQ: return EQ;
-            case GE: return LE;
-            case GT: return LT;
+            case GE: return LT;
+            case GT: return LE;
             default: throw new IllegalStateException("Unexpected operator: " + this);
         }
     }

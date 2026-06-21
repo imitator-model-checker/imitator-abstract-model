@@ -5,14 +5,20 @@ import java.math.BigInteger;
 import java.util.Objects;
 import java.util.Random;
 
+// import com.imitatorModel.imitatorModel.VariableType;
+
 /**
  * Immutable rational number (numerator / denominator) with automatic reduction.
  * Only the operations needed by the visitor are provided.
  */
-public final class BigFraction implements Comparable<BigFraction> {
+public final class BigFraction  implements Comparable<BigFraction> {
 
     private final BigInteger num;   // always reduced
     private final BigInteger den;   // always positive
+
+    public  String getIMITATORType(){
+        return "BigFraction";
+    }
 
     public static final BigFraction ZERO = new BigFraction(BigInteger.ZERO);
     public static final BigFraction ONE = new BigFraction(BigInteger.ONE);

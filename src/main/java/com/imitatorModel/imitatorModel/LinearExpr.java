@@ -5,48 +5,55 @@ import java.util.List;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public class LinearExpr {
-    private List<Pair<VariableType, BigFraction>> terms;
-    private BigFraction constant;
+public final class LinearExpr {
+
+    private final List<Pair<VariableType, BigFraction>> terms;
+    private final BigFraction constant;
 
     public LinearExpr(BigFraction constant) {
-        this.terms = new ArrayList<>();
+        this.terms = List.of();
         this.constant = constant;
     }
 
     public LinearExpr(VariableType v) {
-        this.terms = new ArrayList<>();
+        this.terms = List.of(new Pair<>(v, BigFraction.ONE));
         this.constant = BigFraction.ZERO;
-        addTerm(v, BigFraction.ONE);
     }
-
 
     public LinearExpr(VariableType v, BigFraction c) {
-        this.terms = new ArrayList<>();
-        addTerm(v, c);
+        this.terms = List.of(new Pair<>(v, c));
+        this.constant = BigFraction.ZERO;
     }
 
-    public LinearExpr(VariableType v, BigFraction c,  BigFraction constant) {
-        this.terms = new ArrayList<>();
+    public LinearExpr(VariableType v, BigFraction c, BigFraction constant) {
+        this.terms = List.of(new Pair<>(v, c));
         this.constant = constant;
-        addTerm(v, c);
     }
 
-    public LinearExpr(List<? extends VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
-        this.terms = new ArrayList<>();
-        this.constant = constant;
-        for (int i = 0; i < variables.size(); i++) {
-            addTerm(variables.get(i), coefficients.get(i));
+    public LinearExpr(List<? extends VariableType> variables,
+                      List<BigFraction> coefficients,
+                      BigFraction constant) {
+
+        if (variables.size() != coefficients.size()) {
+            throw new IllegalArgumentException(
+                "variables and coefficients must have the same size");
         }
+
+        List<Pair<VariableType, BigFraction>> temp = new ArrayList<>();
+
+        for (int i = 0; i < variables.size(); i++) {
+            temp.add(new Pair<>(variables.get(i), coefficients.get(i)));
+        }
+
+        this.terms = List.copyOf(temp);
+        this.constant = constant;
     }
 
-
-    public void addTerm(VariableType variable, BigFraction coefficient) {
-        terms.add(new Pair<>(variable, coefficient));
+    public LinearExpr(List<Pair<VariableType, BigFraction>> terms,
+                      BigFraction constant) {
+        this.terms = List.copyOf(terms); // immutable copy
+        this.constant = constant;
     }
-
-
-    // getter methods
 
     public List<Pair<VariableType, BigFraction>> getTerms() {
         return terms;
@@ -55,6 +62,17 @@ public class LinearExpr {
     public BigFraction getConstant() {
         return constant;
     }
+
+    public LinearExpr addTerm(VariableType variable, BigFraction coefficient) {
+        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
+        newTerms.add(new Pair<>(variable, coefficient));
+        return new LinearExpr(newTerms, constant);
+    }
+
+    public LinearExpr add(BigFraction constant){ 
+        return new LinearExpr(this.terms, this.constant.add(constant));
+    }
+    
 
     // Method to format the linear term as specified
     public String toIMITATOR() {

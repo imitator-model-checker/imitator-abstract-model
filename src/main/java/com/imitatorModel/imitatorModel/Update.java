@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public class Update {
+public final class Update {
 
     private ComplexConstraint condition;        // allows to have conditional updates, e.g., if (x > 0) then x := x + 1 else x := x - 1
     private VariableType variable;
@@ -42,6 +42,24 @@ public class Update {
         this.condition = new ComplexConstraint(condition);
         this.variable = variable;
         this.term = new LinearExpr(variables, coefficients, constant);
+    }
+
+    public Update(LinearExpr term1, LinearExpr term2) {
+        // take the first variable as the first one to be seen in the Linear expression 1
+        this.variable = term1.getTerms().get(0).getFirst();
+        this.term = term2;
+    }
+
+    public Update(ComplexConstraint condition, LinearExpr term1, LinearExpr term2) {
+        this.condition = condition;
+        this.variable = term1.getTerms().get(0).getFirst();
+        this.term = term2;
+    }
+
+    public Update(Constraint condition, LinearExpr term1, LinearExpr term2) {
+        this.condition = new ComplexConstraint(condition);
+        this.variable = term1.getTerms().get(0).getFirst();
+        this.term = term2;
     }
 
     public VariableType getVariable() {

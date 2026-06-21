@@ -55,6 +55,10 @@ public class Location {
     public void setStop(List<Clock> clocks) {
         this.stop = clocks;
     }
+
+    public void setStop(Clock clock) {
+        this.stop.add(clock) ;
+    }
     
     public String getName() {
         return name;

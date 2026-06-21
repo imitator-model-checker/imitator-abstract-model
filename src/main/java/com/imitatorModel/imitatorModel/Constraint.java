@@ -2,7 +2,7 @@ package com.imitatorModel.imitatorModel;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public class Constraint {
+public final class Constraint {
     private LinearExpr leftTerm;
     private Operator operator;
     private LinearExpr rightTerm;
