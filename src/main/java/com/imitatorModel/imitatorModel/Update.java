@@ -33,13 +33,13 @@ public final class Update {
     }
 
     public Update(Constraint condition, VariableType variable, LinearExpr term) {
-        this.condition = new ComplexConstraint(condition);
+        this.condition = new ConstraintNode(condition);
         this.variable = variable;
         this.term = term;
     }
 
     public Update(Constraint condition, VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
-        this.condition = new ComplexConstraint(condition);
+        this.condition = new ConstraintNode(condition);
         this.variable = variable;
         this.term = new LinearExpr(variables, coefficients, constant);
     }
@@ -57,7 +57,7 @@ public final class Update {
     }
 
     public Update(Constraint condition, LinearExpr term1, LinearExpr term2) {
-        this.condition = new ComplexConstraint(condition);
+        this.condition = new ConstraintNode(condition);
         this.variable = term1.getTerms().get(0).getFirst();
         this.term = term2;
     }

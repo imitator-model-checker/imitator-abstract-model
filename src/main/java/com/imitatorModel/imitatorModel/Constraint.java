@@ -3,10 +3,10 @@ package com.imitatorModel.imitatorModel;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class Constraint {
-    private LinearExpr leftTerm;
-    private Operator operator;
-    private LinearExpr rightTerm;
-    private Boolean truthConst ;
+    private final LinearExpr leftTerm;
+    private final Operator operator;
+    private final LinearExpr rightTerm;
+    private final Boolean truthConst ;
 
     private static final AtomicLong NEXT_ID = new AtomicLong();
 
@@ -51,6 +51,10 @@ public final class Constraint {
 
 
 
+    public Boolean getTruthConst() {
+        return truthConst;
+    }
+
     public LinearExpr getLeftTerm() {
         return leftTerm;
     }
@@ -65,6 +69,10 @@ public final class Constraint {
 
     public Boolean isTruthConst(){
         return this.truthConst;
+    }
+
+    public Constraint negate(){
+        return new Constraint(this.leftTerm, this.operator.getInverse() ,this.rightTerm,!this.truthConst);
     }
 
 	public String toIMITATOR(){

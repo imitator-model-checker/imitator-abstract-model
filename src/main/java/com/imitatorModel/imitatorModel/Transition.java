@@ -19,7 +19,7 @@ public class Transition {
             throw new IllegalArgumentException("Location 'to' cannot be null");
         }
 
-        this.guard = (guard != null) ? guard : new ComplexConstraint(); // optional
+        this.guard = (guard != null) ? guard : new ConstraintNode(Constraint.TRUE); // optional
         this.action = (action != null) ? action : null;
         this.updates = (updates != null) ? updates : new ListUpdates();
         this.to = to;
@@ -80,45 +80,64 @@ public class Transition {
         StringBuilder sb = new StringBuilder();
         // Imitator doesnt support having disjunction in the guards
         // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
-        if (this.guard.haveDisjunction()) {
-            List<Constraint> constraints = this.guard.getConstraints();
-            List<LogicalOperator> operators = this.guard.getOperators();
+        // if (this.guard.haveDisjunction()) {
+        //     List<Constraint> constraints = this.guard.getConstraints();
+        //     List<LogicalOperator> operators = this.guard.getOperators();
 
 
-            Set<Constraint> sharedAndConstraints = new HashSet<Constraint>();
-            Set<Constraint> orConstraints = new HashSet<Constraint>();
+        //     Set<Constraint> sharedAndConstraints = new HashSet<Constraint>();
+        //     Set<Constraint> orConstraints = new HashSet<Constraint>();
 
 
-            // // First constraint
-            // sharedAndConstraints.add(constraints.get(0));
+        //     // // First constraint
+        //     // sharedAndConstraints.add(constraints.get(0));
 
 
-            for (int i = 0; i < operators.size(); i++) {
+        //     for (int i = 0; i < operators.size(); i++) {
 
 
-                LogicalOperator op = operators.get(i);
-                Constraint curConstraint = constraints.get(i );
-                Constraint nextConstraint = constraints.get(i + 1);
+        //         LogicalOperator op = operators.get(i);
+        //         Constraint curConstraint = constraints.get(i );
+        //         Constraint nextConstraint = constraints.get(i + 1);
 
 
-                if (op == LogicalOperator.OR) {
-                    orConstraints.add(curConstraint);
-                    orConstraints.add(nextConstraint);
-                } else if (op == LogicalOperator.AND) {
-                    sharedAndConstraints.add(curConstraint);
-                }  
-            }
+        //         if (op == LogicalOperator.OR) {
+        //             orConstraints.add(curConstraint);
+        //             orConstraints.add(nextConstraint);
+        //         } else if (op == LogicalOperator.AND) {
+        //             sharedAndConstraints.add(curConstraint);
+        //         }  
+        //     }
             
-                // Create one transition for each OR constraint
-            for (Constraint orConstraint : orConstraints) {
+        //         // Create one transition for each OR constraint
+        //     for (Constraint orConstraint : orConstraints) {
 
-                List<Constraint> combined = new ArrayList<>(sharedAndConstraints);
-                combined.add(orConstraint);
+        //         List<Constraint> combined = new ArrayList<>(sharedAndConstraints);
+        //         combined.add(orConstraint);
 
-                ComplexConstraint newGuard = new ComplexConstraint(combined);
+        //         ComplexConstraint newGuard = new ComplexConstraint(combined);
+
+        //         Transition newTransi = new Transition(
+        //                 newGuard,
+        //                 this.action,
+        //                 this.updates,
+        //                 this.to
+        //         );
+
+        //         sb.append(newTransi.toIMITATOR());
+        //     }
+        // }
+
+        if (this.guard.haveDisjunction()) {
+
+            ComplexConstraint dnfGuard = this.guard.toDNF();
+
+            List<ComplexConstraint> guards = dnfGuard.splitDisjunction();
+
+            for (ComplexConstraint guard : guards) {
 
                 Transition newTransi = new Transition(
-                        newGuard,
+                        guard,
                         this.action,
                         this.updates,
                         this.to
@@ -126,11 +145,16 @@ public class Transition {
 
                 sb.append(newTransi.toIMITATOR());
             }
-        }
 
-        
+        }     
+
         // sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
         else {
+            if (guard instanceof ConstraintNode c &&
+                c.getConstraint() == Constraint.FALSE) {
+                return ""; // do nothing
+            }
+
             sb.append("\n\twhen " + guard.toIMITATOR());
 
             if (action != null) {

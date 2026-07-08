@@ -14,7 +14,7 @@ public class Location {
 
     public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
         this.name = name;
-        this.invariant = (invariant != null) ? invariant : new ComplexConstraint();
+        this.invariant = (invariant != null) ? invariant : new ConstraintNode(Constraint.TRUE);
         this.rate = (rate != null) ? rate : new ArrayList<>();
         this.isUrgent = (isUrgent != null) ? isUrgent : false;
         this.stop = new ArrayList<>();
