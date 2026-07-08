@@ -15,6 +15,13 @@ public final class BigFraction  implements Comparable<BigFraction> {
 
     private final BigInteger num;   // always reduced
     private final BigInteger den;   // always positive
+    private final boolean infinite;
+
+    private BigFraction(boolean infinite) {
+        this.num = BigInteger.ZERO;
+        this.den = BigInteger.ONE;
+        this.infinite = infinite;
+    }
 
     public  String getIMITATORType(){
         return "BigFraction";
@@ -22,7 +29,7 @@ public final class BigFraction  implements Comparable<BigFraction> {
 
     public static final BigFraction ZERO = new BigFraction(BigInteger.ZERO);
     public static final BigFraction ONE = new BigFraction(BigInteger.ONE);
-
+    public static final BigFraction INFINITY = new BigFraction(true);
 
     public BigFraction(BigInteger n) {
         this(n, BigInteger.ONE);    // cast int n as n/1
@@ -45,30 +52,46 @@ public final class BigFraction  implements Comparable<BigFraction> {
         BigInteger g = n.gcd(d);
         this.num = n.divide(g);
         this.den = d.divide(g);
+        this.infinite = false;
     }
 
     // basic fractional arithmetic operations, all return reduced results
     public BigFraction add(BigFraction o) {
+        if (this.infinite || o.infinite){
+            return BigFraction.INFINITY;
+        }
         return new BigFraction(num.multiply(o.den).add(o.num.multiply(den)),
                               den.multiply(o.den));
     }
 
     public BigFraction subtract(BigFraction o) {
+        if (this.infinite || o.infinite){
+            return BigFraction.INFINITY;
+        }
         return new BigFraction(num.multiply(o.den).subtract(o.num.multiply(den)),
                               den.multiply(o.den));
     }
 
     public BigFraction multiply(BigFraction o) {
+        if (this.infinite || o.infinite){
+            return BigFraction.INFINITY;
+        }
         return new BigFraction(num.multiply(o.num), den.multiply(o.den));
     }
 
     public BigFraction divide(BigFraction o) {
+        if (this.infinite || o.infinite){
+            return BigFraction.INFINITY;
+        }
         if (o.num.equals(BigInteger.ZERO))
             throw new ArithmeticException("Division by zero");
         return new BigFraction(num.multiply(o.den), den.multiply(o.num));
     }
 
     public BigFraction negate() {
+        if (this.infinite){
+            return BigFraction.INFINITY;
+        }
         return new BigFraction(num.negate(), den);
     }
 
@@ -95,6 +118,9 @@ public final class BigFraction  implements Comparable<BigFraction> {
 
     //toString
     @Override public String toString() {
+        if (this.infinite){
+            return " inf ";
+        }
         return den.equals(BigInteger.ONE) ? num.toString()
                                          : num + "/" + den;
     }

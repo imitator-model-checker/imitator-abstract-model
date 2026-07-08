@@ -1,28 +1,52 @@
 package com.imitatorModel.imitatorModel;
 
-import com.imitatorModel.bigFraction.BigFraction;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class Constraint {
     private LinearExpr leftTerm;
     private Operator operator;
     private LinearExpr rightTerm;
+    private Boolean truthConst ;
 
-    public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm) {
+    private static final AtomicLong NEXT_ID = new AtomicLong();
+
+    public static final Constraint TRUE = new Constraint(LinearExpr.ZERO, Operator.EQ, LinearExpr.ZERO, true);
+    public static final Constraint FALSE = new Constraint(LinearExpr.ZERO, Operator.NE, LinearExpr.ZERO, false);
+
+  
+    private final long id = NEXT_ID.incrementAndGet();
+
+    public long getId() {
+        return id;
+    }
+
+    public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm, Boolean truthConst) {
         this.leftTerm = leftTerm;
         this.operator = operator;
         this.rightTerm = rightTerm;
+        if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.ZERO)) {
+            this.truthConst = false;
+        } 
+        else if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = true;
+        }
+        else {
+            this.truthConst = truthConst;
+        }
+    }
+
+    public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm) {
+        this(leftTerm,operator,rightTerm,null);
     }
 
     public Constraint(LinearExpr leftTerm,  Operator operator) {
-        this.leftTerm = leftTerm;
-        this.operator = operator;
-        this.rightTerm = new LinearExpr(BigFraction.ZERO);
+        this(leftTerm,operator,LinearExpr.ZERO,null);
+
     }
 
     public Constraint(Operator operator, LinearExpr rightTerm) {
-        this.leftTerm = new LinearExpr(BigFraction.ZERO);
-        this.operator = operator;
-        this.rightTerm = rightTerm;
+        this(LinearExpr.ZERO,operator,rightTerm,null);
+
     }
 
 
@@ -39,7 +63,17 @@ public final class Constraint {
         return rightTerm;
     }
 
+    public Boolean isTruthConst(){
+        return this.truthConst;
+    }
+
 	public String toIMITATOR(){
+        if (truthConst) {
+            return "True";
+        }
+        if (!truthConst) {
+            return "False";
+        }
 		return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
 	}
 

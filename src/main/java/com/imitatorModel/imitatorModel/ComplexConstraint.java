@@ -13,26 +13,22 @@ public class ComplexConstraint {
 
     private List<Constraint> constraints = new ArrayList<Constraint>();
     private  List<LogicalOperator> operators = new ArrayList<LogicalOperator>(); 
+    // private Boolean isFalse; 
 
         /*
     For our implementation, because there is no mechanism to deal with bracket and order of operation, we need to keep the invariant that 
     AND will never follow after an OR. This makes the translation to imitator model later easier. 
+
+    (.. and .. and .. and ..) and (.. or .. or .. or .. )
     */
 
-
-    public static boolean hasAndAfterOr(
-            List<LogicalOperator> operators) {
-
+    public static boolean hasAndAfterOr(List<LogicalOperator> operators) {
         boolean foundOr = false;
 
         for (LogicalOperator operator : operators) {
-
             if (operator == LogicalOperator.OR) {
                 foundOr = true;
-            }
-
-            if (foundOr
-                    && operator == LogicalOperator.AND) {
+            } else if (foundOr && operator == LogicalOperator.AND) {
                 return true;
             }
         }
@@ -41,141 +37,121 @@ public class ComplexConstraint {
     }
 
     public ComplexConstraint() {
-
     }
 
-    public ComplexConstraint(ComplexConstraint complexConstraint) {
-        this.constraints = new ArrayList<>(complexConstraint.getConstraints());
-        this.operators = new ArrayList<>(complexConstraint.getOperators());
+    public ComplexConstraint(ComplexConstraint other) {
+        this.constraints = new ArrayList<>(other.getConstraints());
+        this.operators = new ArrayList<>(other.getOperators());
     }
 
     public ComplexConstraint(Constraint constraint) {
-        this.constraints.add(constraint);
+        constraints.add(constraint);
     }
 
     public ComplexConstraint(List<Constraint> constraints, List<LogicalOperator> operators) {
-        if (constraints.size() != operators.size() + 1) {
-            throw new IllegalArgumentException("The number of operators must be one less than the number of constraints.");
-        }
+        validateInitialCounts(constraints, operators);
+
         this.constraints.addAll(constraints);
         this.operators.addAll(operators);
 
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
-        }
+        validateOperatorOrder();
     }
 
     public ComplexConstraint(List<Constraint> constraints) {
-        if (constraints.size() <= 1) {
-            this.constraints.addAll(constraints);
-        }
-        else{        // number of constraints > 1
-            this.constraints.addAll(constraints);
-            this.operators.addAll(
-                Collections.nCopies(constraints.size() - 1, LogicalOperator.AND)
-            );
-        }
+        this.constraints.addAll(constraints);
 
-    }
-
-    public void addConstraint(Constraint newConstraint, LogicalOperator operator){
-
-        if (this.constraints.isEmpty()) {
-            this.constraints.add(newConstraint);  // dont need to add the and/or in this case
-        }
-        else {
-            this.constraints.add(newConstraint);  
-            this.operators.add(operator);
-        }
-
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        if (constraints.size() > 1) {
+            operators.addAll(Collections.nCopies(
+                    constraints.size() - 1,
+                    LogicalOperator.AND));
         }
     }
 
-    public void addConstraint(Constraint newConstraint){
+    public void addConstraint(Constraint constraint) {
+        addConstraint(constraint, LogicalOperator.AND);
+    }
 
-        if (this.constraints.isEmpty()) {
-            this.constraints.add(newConstraint);   // dont need to add the and/or in this case
-  
-        }
-        else {
-            this.constraints.add(newConstraint); 
-            this.operators.add(LogicalOperator.AND); 
+    public void addConstraint(Constraint constraint, LogicalOperator operator) {
+        if (!constraints.isEmpty()) {
+            operators.add(operator);
         }
 
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        constraints.add(constraint);
+
+        validateOperatorOrder();
+    }
+
+    public void addConstraints(List<Constraint> constraints) {
+        addConstraints(
+                constraints,
+                Collections.nCopies(constraints.size(), LogicalOperator.AND));
+    }
+
+    public void addConstraints(
+            List<Constraint> constraints,
+            List<LogicalOperator> operators) {
+
+        validateAdditionalCounts(constraints, operators);
+
+        this.constraints.addAll(constraints);
+        this.operators.addAll(operators);
+
+        validateOperatorOrder();
+    }
+
+    public void addConstraints(ComplexConstraint complexConstraint) {
+        addConstraints(complexConstraint, LogicalOperator.AND);
+    }
+
+    public void addConstraints(
+            ComplexConstraint complexConstraint,
+            LogicalOperator operator) {
+
+        if (constraints.isEmpty()) {
+            constraints.addAll(complexConstraint.getConstraints());
+            operators.addAll(complexConstraint.getOperators());
+        } else {
+            constraints.addAll(complexConstraint.getConstraints());
+            operators.add(operator);
+            operators.addAll(complexConstraint.getOperators());
+        }
+
+        validateOperatorOrder();
+    }
+
+    private void validateInitialCounts(
+            List<Constraint> constraints,
+            List<LogicalOperator> operators) {
+
+        if (constraints.size() != operators.size() + 1) {
+            throw new IllegalArgumentException(
+                    "The number of operators must be one less than the number of constraints.");
         }
     }
 
-    public void addConstraints(List<Constraint> constraints, List<LogicalOperator> operators){
-        if (this.constraints.isEmpty()) {
-            if (constraints.size() != operators.size() + 1) {
-                throw new IllegalArgumentException("The number of operators must be one less than the number of constraints.");
-            }
-            this.constraints.addAll(constraints);
-            this.operators.addAll(operators);
-        }
-         else {
-            if (constraints.size() != operators.size()) {
-                throw new IllegalArgumentException("The number of operators must be equal to the number of constraints when adding to an existing ComplexConstraint.");
-            }
-            this.constraints.addAll(constraints);
-            this.operators.addAll(operators);
-        }
+    private void validateAdditionalCounts(
+            List<Constraint> constraints,
+            List<LogicalOperator> operators) {
 
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+        boolean valid = this.constraints.isEmpty()
+                ? constraints.size() == operators.size() + 1
+                : constraints.size() == operators.size();
+
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    this.constraints.isEmpty()
+                            ? "The number of operators must be one less than the number of constraints."
+                            : "The number of operators must equal the number of constraints when appending.");
         }
     }
 
-    public void addConstraints(List<Constraint> constraints){
-        if (this.constraints.isEmpty()) {
-            this.constraints.addAll(constraints);
-            this.operators.addAll(Collections.nCopies(constraints.size(), LogicalOperator.AND));
-        }
-         else {
-            this.constraints.addAll(constraints);
-            this.operators.addAll(Collections.nCopies(constraints.size(), LogicalOperator.AND));
-        }
-
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
+    private void validateOperatorOrder() {
+        if (hasAndAfterOr(operators)) {
+            System.err.println(
+                    "Invalid ComplexConstraint: AND cannot follow OR.");
         }
     }
 
-    public void addConstraints(ComplexConstraint complexConstraint, LogicalOperator operator){
-        if (this.constraints.isEmpty()) { // in fact the operator is not needed here
-            this.constraints = complexConstraint.getConstraints();
-            this.operators = complexConstraint.getOperators();
-        }
-         else {
-            this.constraints.addAll(complexConstraint.getConstraints());
-            this.operators.add(operator);
-            this.operators.addAll(complexConstraint.getOperators());
-        }
-
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
-        }
-    }
-
-    public void addConstraints(ComplexConstraint complexConstraint){
-        if (this.constraints.isEmpty()) { // in fact the operator is not needed here
-            this.constraints = complexConstraint.getConstraints();
-            this.operators = complexConstraint.getOperators();
-        }
-         else {
-            this.constraints.addAll(complexConstraint.getConstraints());
-            this.operators.add(LogicalOperator.AND);
-            this.operators.addAll(complexConstraint.getOperators());
-        }
-
-        if (hasAndAfterOr(this.operators) == true){
-           System.err.println("Invalid ComplexConstraint: AND cannot follow after OR");
-        }
-    }
 
     public boolean haveDisjunction(){
         return operators.contains(LogicalOperator.OR);
@@ -188,6 +164,10 @@ public class ComplexConstraint {
 
     public List<LogicalOperator> getOperators() {
         return this.operators ;
+    }
+
+    public Boolean isFalse(){
+        return this.isFalse ;
     }
 
 

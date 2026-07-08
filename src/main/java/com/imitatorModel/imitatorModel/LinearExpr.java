@@ -2,6 +2,8 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
@@ -9,6 +11,9 @@ public final class LinearExpr {
 
     private final List<Pair<VariableType, BigFraction>> terms;
     private final BigFraction constant;
+
+    public static final LinearExpr ZERO = new LinearExpr(BigFraction.ZERO);
+    public static final LinearExpr INFINITY = new LinearExpr(BigFraction.INFINITY);
 
     public LinearExpr(BigFraction constant) {
         this.terms = List.of();
@@ -73,6 +78,47 @@ public final class LinearExpr {
         return new LinearExpr(this.terms, this.constant.add(constant));
     }
     
+    public LinearExpr add(VariableType variable){ 
+        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
+        newTerms.add(new Pair<>(variable, BigFraction.ONE));
+        return new LinearExpr(newTerms, constant);
+    }
+
+     public LinearExpr add(LinearExpr exp){ 
+        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
+        newTerms.addAll(exp.terms);
+        return new LinearExpr(newTerms, this.constant.add(exp.constant));
+    }
+   
+     public LinearExpr minus(LinearExpr exp){ 
+        List<Pair<VariableType, BigFraction>> newTerms = terms.stream()
+            .map(p -> new Pair<VariableType, BigFraction>(
+                    p.getFirst(),
+                    p.getSecond().negate()))
+            .collect(Collectors.toList());
+        newTerms.addAll(exp.terms);
+        return new LinearExpr(newTerms, this.constant.add(exp.constant.negate()));
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof LinearExpr other)) {
+            return false;
+        }
+
+        return Objects.equals(terms, other.terms)
+                && Objects.equals(constant, other.constant);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(terms, constant);
+    }
+
+
 
     // Method to format the linear term as specified
     public String toIMITATOR() {

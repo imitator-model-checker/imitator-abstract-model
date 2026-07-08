@@ -6,8 +6,8 @@ import java.util.List;
 public class ListUpdates {
     private ArrayList<Update> updates;
 
-    public ListUpdates(ArrayList<Update> updates) {
-        this.updates = updates;
+    public ListUpdates(List<Update> updates) {
+        this.updates = new ArrayList<>(updates);
     }
 
     public ListUpdates(Update update) {

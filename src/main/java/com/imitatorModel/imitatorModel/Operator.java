@@ -5,7 +5,8 @@ public enum Operator {
     LE("<="),
     EQ("="),
     GE(">="),
-    GT(">");
+    GT(">"),
+    NE("<>");
 
     private final String symbol;
 
@@ -25,7 +26,8 @@ public enum Operator {
         switch (this) {
             case LT: return GE;
             case LE: return GT;
-            case EQ: return EQ;
+            case EQ: return NE;
+            case NE: return EQ;
             case GE: return LT;
             case GT: return LE;
             default: throw new IllegalStateException("Unexpected operator: " + this);

@@ -81,6 +81,8 @@ public class ImitatorModel {
         return result;
     }
 
+    // The order in which we merge the order matters because it determine which variable is kept
+
 
     public String toIMITATOR() {
         StringBuilder sb = new StringBuilder();
@@ -147,8 +149,12 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Parameter constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
+        for (VariableType v : variables) {
+            if(v instanceof Parameter p && p.constraint != null) {
+                sb.append("\t & " + p.constraint.toIMITATOR() + "\n");
+            }
+        }
         sb.append(";\n");
-
         sb.append("}\n");
 
         return sb.toString();  // Remove the last newline
