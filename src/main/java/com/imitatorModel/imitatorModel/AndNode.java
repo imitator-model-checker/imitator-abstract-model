@@ -1,5 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AndNode extends ComplexConstraint {
@@ -17,6 +18,26 @@ public class AndNode extends ComplexConstraint {
                     .toList()
         );
     }
+    
+    @Override
+    public ComplexConstraint negate() {
+        return new AndNode(
+            children.stream()
+                    .map(ComplexConstraint::negate)
+                    .toList()
+        );
+    }
+
+    //     @Override
+    // public List<Constraint> getLeaves() {
+    //     List<Constraint> leaves = new ArrayList<>();
+
+    //     for (ComplexConstraint child : children) {
+    //         leaves.addAll(child.getLeaves());
+    //     }
+
+    //     return leaves;
+    // }
 
     public List<ComplexConstraint> getChildren() {
         return children;

@@ -9,6 +9,11 @@ public class ConstraintNode extends ComplexConstraint {
         this.constraint = constraint;
     }
 
+    @Override
+    public ComplexConstraint negate() {
+        return new ConstraintNode(constraint.negate());
+    }
+
     public Constraint getConstraint() {
         return constraint;
     }

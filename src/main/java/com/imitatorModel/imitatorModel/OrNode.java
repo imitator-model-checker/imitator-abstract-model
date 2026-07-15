@@ -1,5 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class OrNode extends ComplexConstraint {
@@ -10,6 +11,7 @@ public class OrNode extends ComplexConstraint {
         this.children = children;
     }
 
+
     public static OrNode fromConstraints(List<Constraint> constraints) {
         return new OrNode(
             constraints.stream()
@@ -17,6 +19,16 @@ public class OrNode extends ComplexConstraint {
                     .toList()
         );
     }
+
+    @Override
+    public ComplexConstraint negate() {
+        return new OrNode(
+            children.stream()
+                    .map(ComplexConstraint::negate)
+                    .toList()
+        );
+    }
+
 
     public List<ComplexConstraint> getChildren() {
         return children;
