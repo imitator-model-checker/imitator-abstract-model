@@ -24,13 +24,28 @@ public final class Constraint {
         this.leftTerm = leftTerm;
         this.operator = operator;
         this.rightTerm = rightTerm;
-        if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.ZERO)) {
-            this.truthConst = false;
-        } 
-        else if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = true;
-        }
-        else {
+        // if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.ZERO)) {
+        //     this.truthConst = false;
+        // } 
+        // else if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
+        //     this.truthConst = true;
+        // }
+        // else {
+        //     this.truthConst = truthConst;
+        // }
+        boolean hasClock =
+            !leftTerm.getTerms().isEmpty()
+            && "clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType());
+
+        if (hasClock && (operator == Operator.LT || operator == Operator.LE)) {
+            if (rightTerm.equals(LinearExpr.ZERO)) {
+                this.truthConst = false;
+            } else if (rightTerm.equals(LinearExpr.INFINITY)) {
+                this.truthConst = true;
+            } else {
+                this.truthConst = truthConst;
+            }
+        } else {
             this.truthConst = truthConst;
         }
     }
@@ -71,18 +86,23 @@ public final class Constraint {
         return this.truthConst;
     }
 
-    public Constraint negate(){
-        return new Constraint(this.leftTerm, this.operator.getInverse() ,this.rightTerm,!this.truthConst);
+    public Constraint negate() {
+        Boolean negatedTruthConst =
+                (truthConst == null) ? null : !truthConst;
+
+        return new Constraint(
+                leftTerm,
+                operator.getInverse(),
+                rightTerm,
+                negatedTruthConst);
     }
 
 	public String toIMITATOR(){
-        if (truthConst) {
-            return "True";
+	    if (truthConst != null) {
+            return truthConst ? "True" : "False";
         }
-        if (!truthConst) {
-            return "False";
-        }
-		return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
-	}
+
+        return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
+    }
 
 }
