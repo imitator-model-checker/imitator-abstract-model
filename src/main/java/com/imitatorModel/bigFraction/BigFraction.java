@@ -17,19 +17,19 @@ public final class BigFraction  implements Comparable<BigFraction> {
     private final BigInteger den;   // always positive
     private final boolean infinite;
 
-    private BigFraction(boolean infinite) {
-        this.num = BigInteger.ZERO;
-        this.den = BigInteger.ONE;
-        this.infinite = infinite;
-    }
-
     public  String getIMITATORType(){
         return "BigFraction";
     }
 
     public static final BigFraction ZERO = new BigFraction(BigInteger.ZERO);
     public static final BigFraction ONE = new BigFraction(BigInteger.ONE);
-    public static final BigFraction INFINITY = new BigFraction(true);
+    public static final BigFraction INFINITY = new BigFraction();
+
+    private BigFraction() {
+        this.num = BigInteger.ZERO;
+        this.den = BigInteger.ONE;
+        this.infinite = true;
+    }
 
     public BigFraction(BigInteger n) {
         this(n, BigInteger.ONE);    // cast int n as n/1
@@ -130,7 +130,7 @@ public final class BigFraction  implements Comparable<BigFraction> {
         if (this == o) return true;
         if (!(o instanceof BigFraction)) return false; // o cant be reduced to BigFraction
         BigFraction that = (BigFraction) o; //o can be reduced to BigFraction, so do it
-        return num.equals(that.num) && den.equals(that.den);
+        return num.equals(that.num) && den.equals(that.den) && infinite == that.infinite ;
     }
 
     //hash code for use in hash-based collections

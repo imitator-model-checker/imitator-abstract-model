@@ -2,6 +2,8 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.imitatorModel.bigFraction.BigFraction;
+
 public final class Constraint {
     private final LinearExpr leftTerm;
     private final Operator operator;
@@ -24,28 +26,49 @@ public final class Constraint {
         this.leftTerm = leftTerm;
         this.operator = operator;
         this.rightTerm = rightTerm;
-        // if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.ZERO)) {
-        //     this.truthConst = false;
-        // } 
-        // else if ("clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType()) && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
-        //     this.truthConst = true;
-        // }
-        // else {
-        //     this.truthConst = truthConst;
-        // }
-        boolean hasClock =
-            !leftTerm.getTerms().isEmpty()
-            && "clock".equals(leftTerm.getTerms().get(0).getFirst().getIMITATORType());
 
-        if (hasClock && (operator == Operator.LT || operator == Operator.LE)) {
-            if (rightTerm.equals(LinearExpr.ZERO)) {
+        boolean allPositiveClocksLeft =
+            !leftTerm.getTerms().isEmpty()
+            && leftTerm.getConstant().compareTo(BigFraction.ZERO) >= 0
+            && leftTerm.getTerms().stream().allMatch(term ->
+                "clock".equals(term.getFirst().getIMITATORType())
+                && term.getSecond().compareTo(BigFraction.ZERO) > 0
+            );
+
+        boolean allPositiveClocksRight =
+            !rightTerm.getTerms().isEmpty()
+            && rightTerm.getConstant().compareTo(BigFraction.ZERO) >= 0
+            && rightTerm.getTerms().stream().allMatch(term ->
+                "clock".equals(term.getFirst().getIMITATORType())
+                && term.getSecond().compareTo(BigFraction.ZERO) > 0
+            );
+
+        if (allPositiveClocksLeft && operator == Operator.LT && rightTerm.equals(LinearExpr.ZERO)) {
                 this.truthConst = false;
-            } else if (rightTerm.equals(LinearExpr.INFINITY)) {
+           } 
+        else if (allPositiveClocksLeft && operator == Operator.GE && rightTerm.equals(LinearExpr.ZERO)) {
                 this.truthConst = true;
-            } else {
-                this.truthConst = truthConst;
-            }
-        } else {
+           } 
+        else if (allPositiveClocksRight && operator == Operator.LE && leftTerm.equals(LinearExpr.ZERO)) {
+                this.truthConst = true;
+           }
+        else if (allPositiveClocksRight && operator == Operator.GT && leftTerm.equals(LinearExpr.ZERO)) {
+                this.truthConst = false;
+           }
+        else if (allPositiveClocksLeft && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
+                this.truthConst = true;
+        }
+        else if (allPositiveClocksLeft && (operator == Operator.GT || operator == Operator.GE|| operator == Operator.EQ) && rightTerm.equals(LinearExpr.INFINITY)) {
+                this.truthConst = false;
+        }
+ 
+        else if (allPositiveClocksRight && (operator == Operator.LT || operator == Operator.LE|| operator == Operator.EQ)&& leftTerm.equals(LinearExpr.INFINITY)) {
+                this.truthConst = false;
+           } 
+        else if (allPositiveClocksRight && (operator == Operator.GT || operator == Operator.GE) && leftTerm.equals(LinearExpr.INFINITY)) {
+                this.truthConst = true;
+           } 
+        else {
             this.truthConst = truthConst;
         }
     }
@@ -64,8 +87,6 @@ public final class Constraint {
 
     }
 
-
-
     public Boolean getTruthConst() {
         return truthConst;
     }
@@ -82,9 +103,6 @@ public final class Constraint {
         return rightTerm;
     }
 
-    public Boolean isTruthConst(){
-        return this.truthConst;
-    }
 
     public Constraint negate() {
         Boolean negatedTruthConst =

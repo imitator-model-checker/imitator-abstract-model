@@ -220,35 +220,37 @@ public abstract class ComplexConstraint {
 
             throw new IllegalArgumentException();
         } 
-
-    // @Override
+   
     public String toIMITATOR() {
-        return print(this);
+        return print(this, 0);
     }
 
-    private static String print(ComplexConstraint node) {
+    private static final int OR_PRECEDENCE = 1;
+    private static final int AND_PRECEDENCE = 2;
+    // private static final int ATOM_PRECEDENCE = 3;
 
+    private static String print(ComplexConstraint node, int parentPrecedence) {
         if (node instanceof ConstraintNode c) {
             return c.getConstraint().toIMITATOR();
         }
 
         if (node instanceof AndNode and) {
-            return "(" +
-                    and.getChildren().stream()
-                            .map(ComplexConstraint::print)
-                            .collect(Collectors.joining(" & "))
-                    + ")";
+            String s = and.getChildren().stream()
+                    .map(child -> print(child, AND_PRECEDENCE))
+                    .collect(Collectors.joining(" & "));
+
+            return parentPrecedence > AND_PRECEDENCE ? "(" + s + ")" : s;
         }
 
         if (node instanceof OrNode or) {
-            return "(" +
-                    or.getChildren().stream()
-                            .map(ComplexConstraint::print)
-                            .collect(Collectors.joining(" | "))
-                    + ")";
+            String s = or.getChildren().stream()
+                    .map(child -> print(child, OR_PRECEDENCE))
+                    .collect(Collectors.joining(" | "));
+
+            return parentPrecedence > OR_PRECEDENCE ? "(" + s + ")" : s;
         }
 
-        throw new IllegalArgumentException();
+        throw new IllegalArgumentException("Unknown node: " + node.getClass());
     }
 
     public boolean haveDisjunction() {

@@ -21,7 +21,7 @@ public class AndNode extends ComplexConstraint {
     
     @Override
     public ComplexConstraint negate() {
-        return new AndNode(
+        return new OrNode(
             children.stream()
                     .map(ComplexConstraint::negate)
                     .toList()

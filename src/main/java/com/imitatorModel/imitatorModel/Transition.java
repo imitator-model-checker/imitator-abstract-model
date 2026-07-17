@@ -1,11 +1,5 @@
 package com.imitatorModel.imitatorModel;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import com.imitatorModel.imitatorModel.ComplexConstraint.LogicalOperator;
 
 public class Transition {
     private ComplexConstraint guard;
@@ -76,66 +70,61 @@ public class Transition {
 
 
 
+    // public String toIMITATOR() {
+    //     StringBuilder sb = new StringBuilder();
+    //     // Imitator doesnt support having disjunction in the guards
+    //     // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
+
+    //     if (this.guard.haveDisjunction()) {
+
+    //         ComplexConstraint dnfGuard = this.guard.toDNF();
+
+    //         List<ComplexConstraint> guards = dnfGuard.splitDisjunction();
+
+    //         for (ComplexConstraint guard : guards) {
+
+    //             Transition newTransi = new Transition(
+    //                     guard,
+    //                     this.action,
+    //                     this.updates,
+    //                     this.to
+    //             );
+
+    //             sb.append(newTransi.toIMITATOR());
+    //         }
+
+    //     }     
+
+    //     // sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
+    //     else {
+    //         if (guard instanceof ConstraintNode c &&
+    //             c.getConstraint() == Constraint.FALSE) {
+    //             return ""; // do nothing
+    //         }
+
+    //         sb.append("\n\twhen " + guard.toIMITATOR());
+
+    //         if (action != null) {
+    //             sb.append(" sync " + action.toIMITATOR());
+    //         }
+
+    //         sb.append(updates.toIMITATOR());
+
+    //         sb.append(" goto " + to.nameToIMITATOR() + ";");
+    //     }
+
+    //     return sb.toString();
+	// }
     public String toIMITATOR() {
+    //     // Imitator doesnt support having disjunction in the guards
+    //     // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
+
         StringBuilder sb = new StringBuilder();
-        // Imitator doesnt support having disjunction in the guards
-        // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
-        // if (this.guard.haveDisjunction()) {
-        //     List<Constraint> constraints = this.guard.getConstraints();
-        //     List<LogicalOperator> operators = this.guard.getOperators();
 
+        ComplexConstraint dnfGuard = this.guard.toDNF();
 
-        //     Set<Constraint> sharedAndConstraints = new HashSet<Constraint>();
-        //     Set<Constraint> orConstraints = new HashSet<Constraint>();
-
-
-        //     // // First constraint
-        //     // sharedAndConstraints.add(constraints.get(0));
-
-
-        //     for (int i = 0; i < operators.size(); i++) {
-
-
-        //         LogicalOperator op = operators.get(i);
-        //         Constraint curConstraint = constraints.get(i );
-        //         Constraint nextConstraint = constraints.get(i + 1);
-
-
-        //         if (op == LogicalOperator.OR) {
-        //             orConstraints.add(curConstraint);
-        //             orConstraints.add(nextConstraint);
-        //         } else if (op == LogicalOperator.AND) {
-        //             sharedAndConstraints.add(curConstraint);
-        //         }  
-        //     }
-            
-        //         // Create one transition for each OR constraint
-        //     for (Constraint orConstraint : orConstraints) {
-
-        //         List<Constraint> combined = new ArrayList<>(sharedAndConstraints);
-        //         combined.add(orConstraint);
-
-        //         ComplexConstraint newGuard = new ComplexConstraint(combined);
-
-        //         Transition newTransi = new Transition(
-        //                 newGuard,
-        //                 this.action,
-        //                 this.updates,
-        //                 this.to
-        //         );
-
-        //         sb.append(newTransi.toIMITATOR());
-        //     }
-        // }
-
-        if (this.guard.haveDisjunction()) {
-
-            ComplexConstraint dnfGuard = this.guard.toDNF();
-
-            List<ComplexConstraint> guards = dnfGuard.splitDisjunction();
-
-            for (ComplexConstraint guard : guards) {
-
+        if (dnfGuard.haveDisjunction()) {
+            for (ComplexConstraint guard : dnfGuard.splitDisjunction()) {
                 Transition newTransi = new Transition(
                         guard,
                         this.action,
@@ -145,28 +134,22 @@ public class Transition {
 
                 sb.append(newTransi.toIMITATOR());
             }
-
-        }     
-
-        // sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
-        else {
-            if (guard instanceof ConstraintNode c &&
+        } else {
+            if (dnfGuard instanceof ConstraintNode c &&
                 c.getConstraint() == Constraint.FALSE) {
-                return ""; // do nothing
+                return "";
             }
 
-            sb.append("\n\twhen " + guard.toIMITATOR());
+            sb.append("\n\twhen ").append(dnfGuard.toIMITATOR());
 
             if (action != null) {
-                sb.append(" sync " + action.toIMITATOR());
+                sb.append(" sync ").append(action.toIMITATOR());
             }
 
             sb.append(updates.toIMITATOR());
-
-            sb.append(" goto " + to.nameToIMITATOR() + ";");
+            sb.append(" goto ").append(to.nameToIMITATOR()).append(";");
         }
 
         return sb.toString();
-	}
-
+    }
 }
