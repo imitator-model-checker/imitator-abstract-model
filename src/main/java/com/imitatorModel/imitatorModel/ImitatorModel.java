@@ -101,7 +101,16 @@ public class ImitatorModel {
 		// Variables declaration
 		sb.append("var");
         for (VariableType variable : variables) {
-            sb.append("\n\t" + variable.toIMITATOR() + ": " + variable.getIMITATORType() + ";");  // Adding a newline after each location for readability
+            // sb.append("\n\t" + variable.toIMITATOR() + (variable.getValue() ==null? " = " + variable.getValue() :"")  + ": " + variable.getIMITATORType() + ";");  
+            // Adding a newline after each location for readability
+            sb.append("\n\t")
+            .append(variable.toIMITATOR());
+
+            if (variable.getValue() != null) {
+                sb.append(" = ").append(variable.getValue());
+            }
+
+            sb.append(": ").append(variable.getIMITATORType()).append(";");        
         }
         sb.append("\n");
 
