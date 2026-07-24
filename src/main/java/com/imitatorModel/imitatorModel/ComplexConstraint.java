@@ -3,12 +3,17 @@ package com.imitatorModel.imitatorModel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.logicng.formulas.Formula;
 import org.logicng.formulas.FormulaFactory;
 import org.logicng.transformations.dnf.DNFFactorization;
+
+import com.imitatorModel.bigFraction.BigFraction;
+
 import org.logicng.formulas.Variable;
 import org.logicng.formulas.Literal;
 import org.logicng.formulas.And;
@@ -274,4 +279,62 @@ public abstract class ComplexConstraint {
     public List<ComplexConstraint> splitDisjunction() {
         return List.of(this);
     }
+
+    // public static ComplexConstraint activationCondition(List<Rational> variables) {
+    public ComplexConstraint activationCondition() {
+        return new AndNode(
+            this.getActivationVariables().stream()
+                .<ComplexConstraint>map(variable ->
+                    new ConstraintNode(
+                        new Constraint(
+                            new LinearExpr(variable),
+                            Operator.EQ,
+                            new LinearExpr(BigFraction.ONE)
+                        )
+                    ))
+                .toList()
+        );
+    }
+    
+    public List<Rational> getActivationVariables() {
+        Set<String> names = new LinkedHashSet<>();
+        collectVariables(this, names);
+
+        return names.stream()
+                .map(v -> new Rational(v + "Activate"))
+                .toList();
+    }
+
+    private static void collectVariables(
+            ComplexConstraint node,
+            Set<String> names) {
+
+        if (node instanceof ConstraintNode c) {
+            Constraint constraint = c.getConstraint();
+
+            collectVariables(constraint.getLeftTerm(), names);
+            collectVariables(constraint.getRightTerm(), names);
+            return;
+        }
+
+        if (node instanceof AndNode and) {
+            and.getChildren().forEach(child -> collectVariables(child, names));
+            return;
+        }
+
+        if (node instanceof OrNode or) {
+            or.getChildren().forEach(child -> collectVariables(child, names));
+        }
+    }
+
+    private static void collectVariables(
+            LinearExpr expr,
+            Set<String> names) {
+
+        expr.getTerms().stream()
+                .map(Pair::getFirst)
+                .map(VariableType::getName)
+                .forEach(names::add);
+    }
+
 }
