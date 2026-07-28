@@ -16,7 +16,7 @@ public final class LinearExpr {
     public static final LinearExpr INFINITY = new LinearExpr(BigFraction.INFINITY);
 
     public LinearExpr(BigFraction constant) {
-        this.terms = List.of();
+        this.terms = new ArrayList<>();
         this.constant = constant;
     }
 

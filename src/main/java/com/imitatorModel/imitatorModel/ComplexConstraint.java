@@ -282,7 +282,7 @@ public abstract class ComplexConstraint {
 
     // public static ComplexConstraint activationCondition(List<Rational> variables) {
     public ComplexConstraint activationCondition() {
-        return new AndNode(
+        return new OrNode(
             this.getActivationVariables().stream()
                 .<ComplexConstraint>map(variable ->
                     new ConstraintNode(
