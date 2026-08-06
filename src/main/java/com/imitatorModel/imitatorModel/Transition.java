@@ -1,54 +1,126 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.List;
 
 public class Transition {
     private ComplexConstraint guard;
-    private Action action;
+    private final List<Location> destinations;
+    private final List<Action> actions;
     private ListUpdates updates;
-    private Location to;
 
     // Main constructor (handles defaults)
-    public Transition(ComplexConstraint guard, Action action, ListUpdates updates, Location to) {
-        if (to == null) {
-            throw new IllegalArgumentException("Location 'to' cannot be null");
+    public Transition(
+            ComplexConstraint guard,
+            List<Action> actions,
+            ListUpdates updates,
+            List<Location>  destinations) {
+
+        if (destinations == null || destinations.isEmpty()) {
+            throw new IllegalArgumentException("At least one destination is required");
         }
 
-        this.guard = (guard != null) ? guard : new ConstraintNode(Constraint.TRUE); // optional
-        this.action = (action != null) ? action : null;
-        this.updates = (updates != null) ? updates : new ListUpdates();
-        this.to = to;
+        this.guard = (guard != null)
+                ? guard
+                : new ConstraintNode(Constraint.TRUE);
+
+        this.actions = (actions != null && !actions.isEmpty())
+                ? actions
+                : List.of((Action) null);
+
+        this.updates = (updates != null)
+                ? updates
+                : new ListUpdates();
+
+        this.destinations = destinations;
     }
+
+    public Transition(
+            ComplexConstraint guard,
+            Action action,
+            ListUpdates updates,
+            Location to) {
+                this(guard,List.of(action),updates,List.of(to));
+            }
 
     // Only required argument
     public Transition(Location to) {
-        this(null, null, null, to);
+        this(null, null, null, List.of(to));
     }
-
+    public Transition(List<Location> destinations) {
+        this(null, null, null, destinations);
+    }
+    ///////////////////////////////////////////////////////////////////
     // Optional combinations (delegating)
 
     public Transition(ComplexConstraint guard, Location to) {
-        this(guard, null, null, to);
+        this(guard, null, null, List.of(to));
     }
+
+    public Transition(ComplexConstraint guard, List<Location> destinations) {
+        this(guard, null, null, destinations);
+    }
+    ///////////////////////////////////////////////////////////////////
 
     public Transition(Action action, Location to) {
-        this(null, action, null, to);
+        this(null, List.of(action), null, List.of(to));
     }
+
+    public Transition(Action action, List<Location> destinations) {
+        this(null, List.of(action), null, destinations);
+    }
+
+    public Transition(List<Action> actions, Location to) {
+        this(null, actions, null, List.of(to));
+    }
+
+    public Transition(List<Action> actions, List<Location> destinations) {
+        this(null, actions, null, destinations);
+    }
+    ///////////////////////////////////////////////////////////////////
 
     public Transition(ListUpdates updates, Location to) {
-        this(null, null, updates, to);
+        this(null, null, updates, List.of(to));
     }
+
+    public Transition(ListUpdates updates, List<Location> destinations) {
+        this(null, null, updates, destinations);
+    }
+    ///////////////////////////////////////////////////////////////////
 
     public Transition(ComplexConstraint guard, Action action, Location to) {
-        this(guard, action, null, to);
+        this(guard, List.of(action), null, List.of(to));
     }
+
+    public Transition(ComplexConstraint guard, List<Action> actions, Location to) {
+        this(guard, actions, null, List.of(to));
+    }
+
+    public Transition(ComplexConstraint guard, Action action, List<Location> destinations) {
+        this(guard, List.of(action), null, destinations);
+    }
+
+    public Transition(ComplexConstraint guard, List<Action> actions, List<Location> destinations) {
+        this(guard, actions, null, destinations);
+    }
+    ///////////////////////////////////////////////////////////////////
 
     public Transition(ComplexConstraint guard, ListUpdates updates, Location to) {
-        this(guard, null, updates, to);
+        this(guard, null, updates, List.of(to));
     }
 
-    public Transition(Action action, ListUpdates updates, Location to) {
-        this(null, action, updates, to);
+    public Transition(ComplexConstraint guard, ListUpdates updates,  List<Location> destinations) {
+        this(guard, null, updates, destinations);
     }
+    ///////////////////////////////////////////////////////////////////
+
+    public Transition(Action action, ListUpdates updates, Location to) {
+        this(null, List.of(action), updates, List.of(to));
+    }
+
+    public Transition(List<Action> actions, ListUpdates updates, Location to) {
+        this(null, actions, updates, List.of(to));
+    }
+    ///////////////////////////////////////////////////////////////////
 
 
 
@@ -56,98 +128,58 @@ public class Transition {
         return guard;
     }
 
-    public Action getAction() {
-        return action;
+    public List<Action> getAction() {
+        return actions;
     }
 
     public ListUpdates getUpdates() {
         return updates;
     }
 
-    public Location getTo() {
-        return to;
+    public List<Location> getTo() {
+        return destinations;
     }
 
-
-
-    // public String toIMITATOR() {
-    //     StringBuilder sb = new StringBuilder();
-    //     // Imitator doesnt support having disjunction in the guards
-    //     // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
-
-    //     if (this.guard.haveDisjunction()) {
-
-    //         ComplexConstraint dnfGuard = this.guard.toDNF();
-
-    //         List<ComplexConstraint> guards = dnfGuard.splitDisjunction();
-
-    //         for (ComplexConstraint guard : guards) {
-
-    //             Transition newTransi = new Transition(
-    //                     guard,
-    //                     this.action,
-    //                     this.updates,
-    //                     this.to
-    //             );
-
-    //             sb.append(newTransi.toIMITATOR());
-    //         }
-
-    //     }     
-
-    //     // sb.append("\n\twhen " + (guard.toIMITATOR()) + " sync " + action.toIMITATOR());
-    //     else {
-    //         if (guard instanceof ConstraintNode c &&
-    //             c.getConstraint() == Constraint.FALSE) {
-    //             return ""; // do nothing
-    //         }
-
-    //         sb.append("\n\twhen " + guard.toIMITATOR());
-
-    //         if (action != null) {
-    //             sb.append(" sync " + action.toIMITATOR());
-    //         }
-
-    //         sb.append(updates.toIMITATOR());
-
-    //         sb.append(" goto " + to.nameToIMITATOR() + ";");
-    //     }
-
-    //     return sb.toString();
-	// }
     public String toIMITATOR() {
-    //     // Imitator doesnt support having disjunction in the guards
-    //     // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
+    // Imitator doesnt support having disjunction in the guards
+    // if a guard has disjunction, then split it into multiple transitions, each with one of the disjunct as guard, and the same action, updates, and to location
+        ComplexConstraint dnfGuard = guard.toDNF();
+
+        List<ComplexConstraint> guards;
+
+        if (dnfGuard.haveDisjunction()) {
+            guards = dnfGuard.splitDisjunction();
+        } else {
+            guards = List.of(dnfGuard);
+        }
 
         StringBuilder sb = new StringBuilder();
 
-        ComplexConstraint dnfGuard = this.guard.toDNF();
+        for (ComplexConstraint g : guards) {
 
-        if (dnfGuard.haveDisjunction()) {
-            for (ComplexConstraint guard : dnfGuard.splitDisjunction()) {
-                Transition newTransi = new Transition(
-                        guard,
-                        this.action,
-                        this.updates,
-                        this.to
-                );
-
-                sb.append(newTransi.toIMITATOR());
-            }
-        } else {
-            if (dnfGuard instanceof ConstraintNode c &&
+            if (g instanceof ConstraintNode c &&
                 c.getConstraint() == Constraint.FALSE) {
-                return "";
+                continue;
             }
 
-            sb.append("\n\twhen ").append(dnfGuard.toIMITATOR());
+            for (Action a : actions) {
+                for (Location dest : destinations) {
 
-            if (action != null) {
-                sb.append(" sync ").append(action.toIMITATOR());
+                    sb.append("\n\twhen ")
+                    .append(g.toIMITATOR());
+
+                    if (a != null) {
+                        sb.append(" sync ")
+                        .append(a.toIMITATOR());
+                    }
+
+                    sb.append(updates.toIMITATOR());
+
+                    sb.append(" goto ")
+                    .append(dest.nameToIMITATOR())
+                    .append(";");
+                }
             }
-
-            sb.append(updates.toIMITATOR());
-            sb.append(" goto ").append(to.nameToIMITATOR()).append(";");
         }
 
         return sb.toString();

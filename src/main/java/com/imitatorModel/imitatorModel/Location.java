@@ -98,16 +98,6 @@ public class Location {
         transitions.addAll(transitions);
     }
 
-    public void addCopyTransitionsGivenActions(Transition transition, Set<Action> actions ){
-        // given a transition with action a, and a list of actions let say {b,c,d}, 
-        // add to the location a list of identical transtion, but with the action a replaced by b,c,d
-
-        for (Action action : actions) {
-                Transition newTransition = new Transition(transition.getGuard(), action, transition.getUpdates(), transition.getTo());
-                transitions.add(newTransition);
-            }
-    }
-
     public void addRate(VariableType variable, LinearExpr linearTerm) {
         rate.add(new Pair<>(variable, linearTerm));
     }
