@@ -22,7 +22,7 @@ public class OrNode extends ComplexConstraint {
 
     @Override
     public ComplexConstraint negate() {
-        return new OrNode(
+        return new AndNode(
             children.stream()
                     .map(ComplexConstraint::negate)
                     .toList()

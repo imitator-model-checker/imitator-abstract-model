@@ -13,7 +13,7 @@ public final class Constraint {
     private static final AtomicLong NEXT_ID = new AtomicLong();
 
     public static final Constraint TRUE = new Constraint(LinearExpr.ZERO, Operator.EQ, LinearExpr.ZERO, true);
-    public static final Constraint FALSE = new Constraint(LinearExpr.ZERO, Operator.NE, LinearExpr.ZERO, false);
+    public static final Constraint FALSE = new Constraint(LinearExpr.ZERO, Operator.GT, LinearExpr.ZERO, false);
 
   
     private final long id = NEXT_ID.incrementAndGet();
@@ -55,19 +55,77 @@ public final class Constraint {
         else if (allPositiveClocksRight && operator == Operator.GT && leftTerm.equals(LinearExpr.ZERO)) {
                 this.truthConst = false;
            }
-        else if (allPositiveClocksLeft && (operator == Operator.LT || operator == Operator.LE) && rightTerm.equals(LinearExpr.INFINITY)) {
-                this.truthConst = true;
+        // Infinity vs infinity
+        else if (leftTerm.equals(LinearExpr.INFINITY)
+                && rightTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = switch (operator) {
+                case EQ, LE, GE -> true;
+                case LT, GT -> false;  //, NE 
+            };
         }
-        else if (allPositiveClocksLeft && (operator == Operator.GT || operator == Operator.GE|| operator == Operator.EQ) && rightTerm.equals(LinearExpr.INFINITY)) {
-                this.truthConst = false;
+        else if (leftTerm.equals(LinearExpr.MINUS_INFINITY)
+                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = switch (operator) {
+                case EQ, LE, GE -> true;
+                case LT, GT -> false;  //, NE
+            };
         }
- 
-        else if (allPositiveClocksRight && (operator == Operator.LT || operator == Operator.LE|| operator == Operator.EQ)&& leftTerm.equals(LinearExpr.INFINITY)) {
-                this.truthConst = false;
-           } 
-        else if (allPositiveClocksRight && (operator == Operator.GT || operator == Operator.GE) && leftTerm.equals(LinearExpr.INFINITY)) {
-                this.truthConst = true;
-           } 
+        else if (leftTerm.equals(LinearExpr.INFINITY)
+                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = switch (operator) {
+                case GT, GE -> true;  //, NE
+                case LT, LE, EQ -> false;
+            };
+        }
+        else if (leftTerm.equals(LinearExpr.MINUS_INFINITY)
+                && rightTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = switch (operator) {
+                case LT, LE -> true;   //, NE
+                case GT, GE, EQ -> false;
+            };
+        }
+        /////////////////
+        else if ((operator == Operator.LT || operator == Operator.LE)
+                && rightTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = true;
+        }
+
+        else if ((operator == Operator.GT || operator == Operator.GE
+                || operator == Operator.EQ)
+                && rightTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = false;
+        }
+
+        else if ((operator == Operator.LT || operator == Operator.LE
+                || operator == Operator.EQ)
+                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = false;
+        }
+        else if ((operator == Operator.GT || operator == Operator.GE)
+                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = true;
+        }
+
+        else if ((operator == Operator.LT || operator == Operator.LE
+                || operator == Operator.EQ)
+                && leftTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = false;
+        }
+        else if ((operator == Operator.GT || operator == Operator.GE)
+                && leftTerm.equals(LinearExpr.INFINITY)) {
+            this.truthConst = true;
+        }
+
+        else if ((operator == Operator.LT || operator == Operator.LE)
+                && leftTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = true;
+        }
+        else if ((operator == Operator.GT || operator == Operator.GE
+                || operator == Operator.EQ)
+                && leftTerm.equals(LinearExpr.MINUS_INFINITY)) {
+            this.truthConst = false;
+        }
+
         else {
             this.truthConst = truthConst;
         }

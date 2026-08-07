@@ -237,6 +237,16 @@ public abstract class ComplexConstraint {
     private static String print(ComplexConstraint node, int parentPrecedence) {
         if (node instanceof ConstraintNode c) {
             return c.getConstraint().toIMITATOR();
+            // var ct = c.getConstraint();
+
+            // if (ct.getOperator() != Operator.NE || !ct.equals(Constraint.FALSE) || !ct.equals(Constraint.TRUE)) {
+            //     return ct.toIMITATOR();
+            // }
+
+            // return OrNode.fromConstraints(List.of(
+            //         new Constraint(ct.getLeftTerm(), Operator.LT, ct.getRightTerm()),
+            //         new Constraint(ct.getLeftTerm(), Operator.GT, ct.getRightTerm())
+            // )).toIMITATOR();
         }
 
         if (node instanceof AndNode and) {

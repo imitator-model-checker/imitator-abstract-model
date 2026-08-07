@@ -14,6 +14,7 @@ public final class LinearExpr {
 
     public static final LinearExpr ZERO = new LinearExpr(BigFraction.ZERO);
     public static final LinearExpr INFINITY = new LinearExpr(BigFraction.INFINITY);
+    public static final LinearExpr MINUS_INFINITY = new LinearExpr(BigFraction.MINUS_INFINITY);
 
     public LinearExpr(BigFraction constant) {
         this.terms = new ArrayList<>();
