@@ -85,47 +85,72 @@ public abstract class ComplexConstraint {
     public ComplexConstraint toDNF() {
         FormulaFactory f = new FormulaFactory();
 
-        Map<String, Constraint> registry = new HashMap<>();
-        collectConstraints(this, registry);
+        // Maps LogicNG variables back to the original constraints.
+        Map<Variable, Constraint> registry = new HashMap<>();
 
-        Formula formula = toFormula(this, f, new HashMap<>());
+        // Maps logically equal constraints to the same LogicNG variable.
+        Map<Constraint, Variable> vars = new HashMap<>();
+
+        Formula formula = toFormula(this, f, vars, registry);
         Formula dnf = formula.transform(new DNFFactorization());
 
         return fromFormula(dnf, registry);
     }
 
-    private static void collectConstraints(
+    public static Formula toFormula(
             ComplexConstraint node,
-            Map<String, Constraint> registry) {
+            FormulaFactory f,
+            Map<Constraint, Variable> vars,
+            Map<Variable, Constraint> registry) {
 
         if (node instanceof ConstraintNode c) {
             Constraint constraint = c.getConstraint();
 
-            if (constraint != Constraint.TRUE &&
-                constraint != Constraint.FALSE) {
-
-                registry.putIfAbsent(
-                        String.valueOf(constraint.getId()),
-                        constraint);
+            // TRUE / FALSE are represented directly as Boolean constants.
+            if (constraint.getTruthConst() != null) {
+                return constraint.getTruthConst()
+                        ? f.verum()
+                        : f.falsum();
             }
-            return;
+
+            Variable variable = vars.computeIfAbsent(
+                    constraint,
+                    k -> f.variable("c" + vars.size())
+            );
+
+            // Store the reverse mapping so fromFormula()
+            // can recover the original Constraint.
+            registry.putIfAbsent(variable, constraint);
+
+            return variable;
         }
 
         if (node instanceof AndNode and) {
-            and.getChildren()
-            .forEach(child -> collectConstraints(child, registry));
-            return;
+            return f.and(
+                    and.getChildren()
+                            .stream()
+                            .map(child ->
+                                    toFormula(child, f, vars, registry))
+                            .toList()
+            );
         }
 
         if (node instanceof OrNode or) {
-            or.getChildren()
-            .forEach(child -> collectConstraints(child, registry));
+            return f.or(
+                    or.getChildren()
+                            .stream()
+                            .map(child ->
+                                    toFormula(child, f, vars, registry))
+                            .toList()
+            );
         }
+
+        throw new IllegalArgumentException();
     }
 
     private static ComplexConstraint fromFormula(
             Formula formula,
-            Map<String, Constraint> registry) {
+            Map<Variable, Constraint> registry) {
 
         switch (formula.type()) {
 
@@ -139,13 +164,15 @@ public abstract class ComplexConstraint {
 
                 Literal literal = (Literal) formula;
 
-                Constraint original = registry.get(literal.variable().name());
+                Constraint original =
+                        registry.get(literal.variable());
 
                 if (original == null) {
                     throw new IllegalStateException(
-                            "Unknown constraint id: " + literal.variable().name());
+                            "Unknown constraint variable: "
+                            + literal.variable().name());
                 }
-                
+
                 if (literal.phase()) {
                     return new ConstraintNode(original);
                 } else {
@@ -183,48 +210,6 @@ public abstract class ComplexConstraint {
         }
     }
 
-    public static   Formula toFormula(
-                ComplexConstraint node,
-                FormulaFactory f,
-                Map<Constraint, Variable> vars) {
-
-            if (node instanceof ConstraintNode c) {
-
-                Constraint constraint = c.getConstraint();
-
-                // Handle known true/false constraints
-                if (constraint.getTruthConst() != null) {
-                    return constraint.getTruthConst()
-                            ? f.verum()
-                            : f.falsum();
-                }
-
-                return vars.computeIfAbsent(
-                        constraint,
-                        k -> f.variable(String.valueOf(k.getId()))
-                );
-            }
-
-            if (node instanceof AndNode and) {
-                return f.and(
-                    and.getChildren()
-                    .stream()
-                    .map(child -> toFormula(child, f, vars))
-                    .toList()
-                );
-            }
-
-            if (node instanceof OrNode or) {
-                return f.or(
-                    or.getChildren()
-                    .stream()
-                    .map(child -> toFormula(child, f, vars))
-                    .toList()
-                );
-            }
-
-            throw new IllegalArgumentException();
-        } 
    
     public String toIMITATOR() {
         return print(this, 0);

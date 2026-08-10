@@ -20,6 +20,8 @@ public abstract class VariableType{
         return null;
     }
     
+    // Asumption : there cant be 2 variables with the same name. 
+    // Rely on this so when add another variable of the same name into a model (keep them as set), it doesnt overwrite/have any effect
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -27,10 +29,12 @@ public abstract class VariableType{
 
         VariableType other = (VariableType) o;
         return Objects.equals(name, other.name);
+        // && Objects.equals(getIMITATORType(), other.getIMITATORType());
     }
 
     @Override
     public int hashCode() {
+        // return Objects.hash(name, getIMITATORType());
         return Objects.hash(name);
     }
 

@@ -1,7 +1,9 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -106,20 +108,32 @@ public final class LinearExpr {
         if (this == obj) {
             return true;
         }
+
         if (!(obj instanceof LinearExpr other)) {
             return false;
         }
 
-        return Objects.equals(terms, other.terms)
-                && Objects.equals(constant, other.constant);
+        return Objects.equals(constant, other.constant)
+                && termCounts(terms).equals(termCounts(other.terms));
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(terms, constant);
+        return Objects.hash(
+                constant,
+                termCounts(terms)
+        );
     }
 
+    private static <T> Map<T, Integer> termCounts(List<T> terms) {
+        Map<T, Integer> counts = new HashMap<>();
 
+        for (T term : terms) {
+            counts.merge(term, 1, Integer::sum);
+        }
+
+        return counts;
+    }
 
     // Method to format the linear term as specified
     public String toIMITATOR() {

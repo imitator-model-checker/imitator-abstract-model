@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Objects;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
@@ -10,22 +10,16 @@ public final class Constraint {
     private final LinearExpr rightTerm;
     private final Boolean truthConst ;
 
-    private static final AtomicLong NEXT_ID = new AtomicLong();
 
     public static final Constraint TRUE = new Constraint(LinearExpr.ZERO, Operator.EQ, LinearExpr.ZERO, true);
     public static final Constraint FALSE = new Constraint(LinearExpr.ZERO, Operator.GT, LinearExpr.ZERO, false);
-
-  
-    private final long id = NEXT_ID.incrementAndGet();
-
-    public long getId() {
-        return id;
-    }
 
     public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm, Boolean truthConst) {
         this.leftTerm = leftTerm;
         this.operator = operator;
         this.rightTerm = rightTerm;
+
+        // this.truthConst = truthConst;
 
         boolean allPositiveClocksLeft =
             !leftTerm.getTerms().isEmpty()
@@ -181,4 +175,29 @@ public final class Constraint {
         return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof Constraint other)) {
+            return false;
+        }
+
+        return Objects.equals(leftTerm, other.leftTerm)
+                && operator == other.operator
+                && Objects.equals(rightTerm, other.rightTerm)
+                && Objects.equals(truthConst, other.truthConst);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                leftTerm,
+                operator,
+                rightTerm,
+                truthConst
+        );
+    }
 }

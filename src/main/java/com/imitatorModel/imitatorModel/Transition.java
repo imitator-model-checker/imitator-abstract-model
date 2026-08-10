@@ -48,104 +48,6 @@ public class Transition {
         );
     }
 
-    // public Transition(
-    //     ComplexConstraint guard,
-    //     List<Action> actions,
-    //     ListUpdates updates,
-    //     Location to) {
-    //         this(guard,actions,updates,List.of(to));
-    //     }
-
-    // public Transition(
-    //     ComplexConstraint guard,
-    //     Action action,
-    //     ListUpdates updates,
-    //      List<Location>  destinations) {
-    //         this(guard,List.of(action),updates,destinations);
-    //     }
-
-    // // Only required argument
-    // public Transition(Location to) {
-    //     this(null, null, null, List.of(to));
-    // }
-    // public Transition(List<Location> destinations) {
-    //     this(null, null, null, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-    // // Optional combinations (delegating)
-
-    // public Transition(ComplexConstraint guard, Location to) {
-    //     this(guard, null, null, List.of(to));
-    // }
-
-    // public Transition(ComplexConstraint guard, List<Location> destinations) {
-    //     this(guard, null, null, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-    // public Transition(Action action, Location to) {
-    //     this(null, List.of(action), null, List.of(to));
-    // }
-
-    // public Transition(Action action, List<Location> destinations) {
-    //     this(null, List.of(action), null, destinations);
-    // }
-
-    // public Transition(List<Action> actions, Location to) {
-    //     this(null, actions, null, List.of(to));
-    // }
-
-    // public Transition(List<Action> actions, List<Location> destinations) {
-    //     this(null, actions, null, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-    // public Transition(ListUpdates updates, Location to) {
-    //     this(null, null, updates, List.of(to));
-    // }
-
-    // public Transition(ListUpdates updates, List<Location> destinations) {
-    //     this(null, null, updates, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-    // public Transition(ComplexConstraint guard, Action action, Location to) {
-    //     this(guard, List.of(action), null, List.of(to));
-    // }
-
-    // public Transition(ComplexConstraint guard, List<Action> actions, Location to) {
-    //     this(guard, actions, null, List.of(to));
-    // }
-
-    // public Transition(ComplexConstraint guard, Action action, List<Location> destinations) {
-    //     this(guard, List.of(action), null, destinations);
-    // }
-
-    // public Transition(ComplexConstraint guard, List<Action> actions, List<Location> destinations) {
-    //     this(guard, actions, null, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-    // public Transition(ComplexConstraint guard, ListUpdates updates, Location to) {
-    //     this(guard, null, updates, List.of(to));
-    // }
-
-    // public Transition(ComplexConstraint guard, ListUpdates updates,  List<Location> destinations) {
-    //     this(guard, null, updates, destinations);
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-    // public Transition(Action action, ListUpdates updates, Location to) {
-    //     this(null, List.of(action), updates, List.of(to));
-    // }
-
-    // public Transition(List<Action> actions, ListUpdates updates, Location to) {
-    //     this(null, actions, updates, List.of(to));
-    // }
-    // ///////////////////////////////////////////////////////////////////
-
-
-
     public ComplexConstraint getGuard() {
         return guard;
     }
@@ -184,24 +86,29 @@ public class Transition {
                 continue;
             }
 
+        if (actions.isEmpty()) {
+            for (Location dest : destinations) {
+                sb.append("\n\twhen ")
+                .append(g.toIMITATOR())
+                .append(updates.toIMITATOR())
+                .append(" goto ")
+                .append(dest.nameToIMITATOR())
+                .append(";");
+            }
+        } else {
             for (Action a : actions) {
                 for (Location dest : destinations) {
-
                     sb.append("\n\twhen ")
-                    .append(g.toIMITATOR());
-
-                    if (a != null) {
-                        sb.append(" sync ")
-                        .append(a.toIMITATOR());
-                    }
-
-                    sb.append(updates.toIMITATOR());
-
-                    sb.append(" goto ")
+                    .append(g.toIMITATOR())
+                    .append(" sync ")
+                    .append(a.toIMITATOR())
+                    .append(updates.toIMITATOR())
+                    .append(" goto ")
                     .append(dest.nameToIMITATOR())
                     .append(";");
                 }
             }
+        }
         }
 
         return sb.toString();
