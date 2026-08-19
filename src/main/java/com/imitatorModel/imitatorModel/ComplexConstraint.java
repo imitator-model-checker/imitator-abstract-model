@@ -283,7 +283,7 @@ public abstract class ComplexConstraint {
                     new ConstraintNode(
                         new Constraint(
                             new LinearExpr(variable),
-                            Operator.EQ,
+                            Operator.GE,
                             new LinearExpr(BigFraction.ONE)
                         )
                     ))

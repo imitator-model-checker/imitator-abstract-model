@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -61,6 +62,15 @@ public class ImitatorModel {
         this.addVariable(parameter);
         return parameter;
     }
+
+    // public void addParameterFromExpression(LinearExpr expr) {
+    //     for (Pair<VariableType, BigFraction> term : expr.getTerms()) {
+    //         VariableType variable = term.getFirst();
+    //         if (variable instanceof Parameter parameter) {
+    //             this.addVariable(parameter);
+    //         }
+    //     }
+    // }
 
     public Rational addRational(String name) {
         Rational rational = new Rational(name);

@@ -23,8 +23,11 @@ public class ListUpdates {
         return updates;
     }
 
-    public void addUpdate (Update update){
-        this.updates.add(update);
+
+    public ListUpdates addUpdate(Update update) {
+        List<Update> newUpdates = new ArrayList<>(this.updates);
+        newUpdates.add(update);
+        return new ListUpdates(newUpdates);
     }
 
     public String toIMITATOR() {
