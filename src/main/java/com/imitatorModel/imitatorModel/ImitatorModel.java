@@ -9,6 +9,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.imitatorModel.imitatorModel.onlineModel.ImitatorDocument;
+import com.imitatorModel.imitatorModel.onlineModel.ImitatorRenderer;
+import com.imitatorModel.imitatorModel.onlineModel.OnlineUpdateTarget;
+import com.imitatorModel.imitatorModel.onlineModel.PTADocument;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,7 +55,15 @@ public class ImitatorModel {
         return ptas;
     }
 
-    // helper methods
+    public PTA getPTA(String name) {
+        return ptas.stream()
+                .filter(p -> p.getName().equals(name))
+                .findFirst()
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Unknown PTA: " + name));
+    }
+
+    // addVariable from name
     public Clock addClock(String name) {
         Clock clock = new Clock(name);
         this.addVariable(clock);
@@ -62,15 +75,6 @@ public class ImitatorModel {
         this.addVariable(parameter);
         return parameter;
     }
-
-    // public void addParameterFromExpression(LinearExpr expr) {
-    //     for (Pair<VariableType, BigFraction> term : expr.getTerms()) {
-    //         VariableType variable = term.getFirst();
-    //         if (variable instanceof Parameter parameter) {
-    //             this.addVariable(parameter);
-    //         }
-    //     }
-    // }
 
     public Rational addRational(String name) {
         Rational rational = new Rational(name);
@@ -143,7 +147,6 @@ public class ImitatorModel {
         }
         sb.append("\n");
 
-// 		loc[pta] <- l1,
 
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Initial discrete variables assignments *)\n");
@@ -188,6 +191,35 @@ public class ImitatorModel {
         } catch (IOException e) {
             System.err.println("Error writing to file: " + e.getMessage());
         }
+    }
+
+    // ============================================================
+    // Online update
+    // ============================================================
+
+    /**
+     * Online update is deliberately restricted.
+     *
+     * No variables.
+     * No new PTA.
+     * No initial state changes.
+     *
+     * Only an existing PTA can be updated.
+     */
+    public OnlineUpdateTarget onlineUpdate(
+            String ptaName,
+            ImitatorDocument document,
+            ImitatorRenderer renderer) {
+
+        PTA pta = getPTA(ptaName);
+
+        PTADocument ptaDocument =
+                document.getPTA(ptaName);
+
+        return new OnlineUpdateTarget(
+                pta,
+                ptaDocument,
+                renderer);
     }
 
 }

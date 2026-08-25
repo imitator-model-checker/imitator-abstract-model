@@ -2,7 +2,6 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 public class Location {
     private String name;
@@ -11,41 +10,50 @@ public class Location {
     private List<Transition> transitions = new ArrayList<>();
     private Boolean isUrgent ;
     private List<Clock> stop ;
+    private Boolean isWaiting ; //for online log only
 
-    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
+    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent, Boolean isWaiting) {
         this.name = name;
         this.invariant = (invariant != null) ? invariant : new ConstraintNode(Constraint.TRUE);
         this.rate = (rate != null) ? rate : new ArrayList<>();
         this.isUrgent = (isUrgent != null) ? isUrgent : false;
+        this.isWaiting = (isWaiting != null) ? isWaiting : false;
         this.stop = new ArrayList<>();
     }
 
     public Location(String name) {
-        this(name, null, null, null);
+        this(name, null, null, null,null);
     }
 
-    public Location(String name, ComplexConstraint invariant) {
-        this(name, invariant, null, null);
+    // public Location(String name, ComplexConstraint invariant) {
+    //     this(name, invariant, null, null);
+    // }
+
+    // public Location(String name, Boolean isUrgent) {
+    //     this(name, null, null, isUrgent);
+    // }
+
+    // public Location(String name, List<Pair<VariableType, LinearExpr>> rate) {
+    //     this(name, null, rate, null);
+    // }
+
+    // public Location(String name, ComplexConstraint invariant, Boolean isUrgent) {
+    //     this(name, invariant, null, isUrgent );
+    // }
+
+    // public Location(String name, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
+    //     this(name, null, rate, null );
+    // }
+
+    // public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate) {
+    //     this(name, invariant, rate, null );
+    // }
+    public Boolean getIsWaiting() {
+        return isWaiting;
     }
 
-    public Location(String name, Boolean isUrgent) {
-        this(name, null, null, isUrgent);
-    }
-
-    public Location(String name, List<Pair<VariableType, LinearExpr>> rate) {
-        this(name, null, rate, null);
-    }
-
-    public Location(String name, ComplexConstraint invariant, Boolean isUrgent) {
-        this(name, invariant, null, isUrgent );
-    }
-
-    public Location(String name, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
-        this(name, null, rate, null );
-    }
-
-    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate) {
-        this(name, invariant, rate, null );
+    public void setIsWaiting(Boolean isWaiting) {
+        this.isWaiting = isWaiting;
     }
 
     public List<Clock> getStop() {
@@ -85,8 +93,8 @@ public class Location {
         this.invariant = invariant;
     }
 
-    public void setUrgent() {
-        this.isUrgent = true;
+    public void setUrgent(Boolean isUrgent) {
+        this.isUrgent = isUrgent;
     }
 
     public void addTransition(Transition transition) {

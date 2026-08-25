@@ -29,6 +29,19 @@ public class PTA {
         locations.add(location);
     }
 
+    public void deleteLocation(String locationName) {
+
+        locations.removeIf(
+            location -> location.getName().equals(locationName)
+        );
+    }
+
+    public void replaceLocation(Location newLocation) {
+
+        deleteLocation(newLocation.getName());
+        addLocation(newLocation);
+    }
+
     public void addAction(Action action) {
         actions.add(action);
     }
