@@ -2,6 +2,7 @@ package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Location {
     private String name;
@@ -25,29 +26,6 @@ public class Location {
         this(name, null, null, null,null);
     }
 
-    // public Location(String name, ComplexConstraint invariant) {
-    //     this(name, invariant, null, null);
-    // }
-
-    // public Location(String name, Boolean isUrgent) {
-    //     this(name, null, null, isUrgent);
-    // }
-
-    // public Location(String name, List<Pair<VariableType, LinearExpr>> rate) {
-    //     this(name, null, rate, null);
-    // }
-
-    // public Location(String name, ComplexConstraint invariant, Boolean isUrgent) {
-    //     this(name, invariant, null, isUrgent );
-    // }
-
-    // public Location(String name, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent) {
-    //     this(name, null, rate, null );
-    // }
-
-    // public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate) {
-    //     this(name, invariant, rate, null );
-    // }
     public Boolean getIsWaiting() {
         return isWaiting;
     }
@@ -114,7 +92,21 @@ public class Location {
 		return name;
 	}
 
+    
+    public boolean equals(Location o) {
+        return this.name.equals(o.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
 	public String toIMITATOR(){
+        if (isWaiting){
+            return "";
+        }
+
         // need this function because imitator guard doesnt support OR under any circumsance, so we need to raise error if we have disjunction in invariant
         if(invariant.haveDisjunction()){
             throw new IllegalStateException("Invariant contains disjunction, which is not supported in IMITATOR");

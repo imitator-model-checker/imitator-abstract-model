@@ -9,10 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.imitatorModel.imitatorModel.onlineModel.ImitatorDocument;
-import com.imitatorModel.imitatorModel.onlineModel.ImitatorRenderer;
-import com.imitatorModel.imitatorModel.onlineModel.OnlineUpdateTarget;
-import com.imitatorModel.imitatorModel.onlineModel.PTADocument;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,7 +17,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ImitatorModel {
-    // private List<VariableType> variables;
     private Set<VariableType> variables;
     private List<PTA> ptas;
 
@@ -94,11 +89,28 @@ public class ImitatorModel {
 
         return result;
     }
-
     // The order in which we merge the order matters because it determine which variable is kept
 
 
     public String toIMITATOR() {
+        StringBuilder sb = new StringBuilder();
+        // Automata
+        for (PTA pta : ptas) {
+            sb.append(pta.toIMITATOR()).append("\n");  // Adding a newline after each PTA for readability
+        }
+        return this.generateHeader()+ this.generateVarDeclaration()+ sb.toString() + this.generateInitialization();
+    }
+
+    public String toOnlineIMITATOR(PTA targetPTA) {
+        StringBuilder sb = new StringBuilder();
+        // Automata
+        for (PTA pta : ptas) {
+            sb.append(pta.equals(targetPTA) ? pta.toOnlineIMITATOR() : pta.toIMITATOR()).append("\n");  // Adding a newline after each PTA for readability
+        }
+        return this.generateHeader()+ this.generateVarDeclaration()+ sb.toString() + this.generateInitialization();
+    }
+
+    public String generateHeader(){
         StringBuilder sb = new StringBuilder();
         // Get the current date and time
         ZonedDateTime now = ZonedDateTime.now();
@@ -112,10 +124,14 @@ public class ImitatorModel {
         sb.append(" * Model automatically generated (" + formattedDateTime + ")\n");
         sb.append("************************************************************)\n");
 
+        return sb.toString();
+    }
+
+    public String generateVarDeclaration (){
+        StringBuilder sb = new StringBuilder();
 		// Variables declaration
 		sb.append("var");
-        for (VariableType variable : variables) {
-            // sb.append("\n\t" + variable.toIMITATOR() + (variable.getValue() ==null? " = " + variable.getValue() :"")  + ": " + variable.getIMITATORType() + ";");  
+        for (VariableType variable : variables) {  
             // Adding a newline after each location for readability
             sb.append("\n\t")
             .append(variable.toIMITATOR());
@@ -128,11 +144,12 @@ public class ImitatorModel {
         }
         sb.append("\n");
 
-        // Automata
-        for (PTA pta : ptas) {
-            sb.append(pta.toIMITATOR()).append("\n");  // Adding a newline after each PTA for readability
-        }
+        return sb.toString();
+    }
 
+
+    public String generateInitialization (){
+        StringBuilder sb = new StringBuilder();
         // Initial state
         sb.append("(************************************************************)\n");
         sb.append("(* Initial state *)\n");
@@ -163,7 +180,7 @@ public class ImitatorModel {
         sb.append("\t(* Initial clock constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
         for (VariableType v : variables) {
-            if(v.is_continuous_initially_0()) {
+            if(v instanceof Clock  && v.is_continuous_initially_0()) {
                 sb.append("\t & " + v.toIMITATOR() + " = 0\n");
             }
         }
@@ -172,8 +189,8 @@ public class ImitatorModel {
         sb.append("\t(* Parameter constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
         for (VariableType v : variables) {
-            if(v instanceof Parameter p && p.constraint != null) {
-                sb.append("\t & " + p.constraint.toIMITATOR() + "\n");
+            if(v instanceof Parameter p && p.geConstraint() != null) {
+                sb.append("\t & " + p.geConstraint().toIMITATOR() + "\n");
             }
         }
         sb.append(";\n");
@@ -191,35 +208,6 @@ public class ImitatorModel {
         } catch (IOException e) {
             System.err.println("Error writing to file: " + e.getMessage());
         }
-    }
-
-    // ============================================================
-    // Online update
-    // ============================================================
-
-    /**
-     * Online update is deliberately restricted.
-     *
-     * No variables.
-     * No new PTA.
-     * No initial state changes.
-     *
-     * Only an existing PTA can be updated.
-     */
-    public OnlineUpdateTarget onlineUpdate(
-            String ptaName,
-            ImitatorDocument document,
-            ImitatorRenderer renderer) {
-
-        PTA pta = getPTA(ptaName);
-
-        PTADocument ptaDocument =
-                document.getPTA(ptaName);
-
-        return new OnlineUpdateTarget(
-                pta,
-                ptaDocument,
-                renderer);
     }
 
 }

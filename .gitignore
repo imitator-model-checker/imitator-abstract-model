@@ -42,6 +42,7 @@
 target/logs2imi-*.jar
 target/maven-archiver/
 target/maven-status/
+target/
 
 # Ignore VS Code workspace settings
 .vscode/
