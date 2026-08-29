@@ -199,15 +199,15 @@ public class ImitatorModel {
         return sb.toString();  // Remove the last newline
     }
 
-    public void export2File(String outputFilePath) {
-        String stringModel = this.toIMITATOR();  
+    // public void export2File(String outputFilePath) {
+    //     String stringModel = this.toIMITATOR();  
 
-        try {
-            Files.writeString(Path.of(outputFilePath), stringModel);
-            System.out.println("Model exported to " + outputFilePath);
-        } catch (IOException e) {
-            System.err.println("Error writing to file: " + e.getMessage());
-        }
-    }
+    //     try {
+    //         Files.writeString(Path.of(outputFilePath), stringModel);
+    //         System.out.println("Model exported to " + outputFilePath);
+    //     } catch (IOException e) {
+    //         System.err.println("Error writing to file: " + e.getMessage());
+    //     }
+    // }
 
 }

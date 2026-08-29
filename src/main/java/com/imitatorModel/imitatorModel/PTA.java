@@ -32,6 +32,10 @@ public class PTA {
         this.actions = new HashSet<>();
     }
 
+    public void setSeparateFileName (String filename){
+        separateFileName = filename;
+    }
+
     public boolean equals(PTA other){
         return this.name.equals(other.name);
     }
@@ -145,32 +149,40 @@ public class PTA {
         if (separateFileName != null){
             Files.writeString(
                     Paths.get(this.separateFileName),
-                    this.toIMITATOR(),
+                    this.generatePrefix() + this.generateLocations() ,
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING);
         }
     }
 
-    public String generatePendingLocations() {
-
+    // the side effect of this function is that it will consume the queue
+    public String drainPendingLocations() {
         StringBuilder sb = new StringBuilder();
 
         Location location;
-
         while ((location = pendingOnlineLocations.poll()) != null) {
-            sb.append(location.toIMITATOR());
-            sb.append("\n");
+            sb.append(location.toIMITATOR()).append('\n');
         }
-            return sb.toString();
+
+        return sb.toString();
     }
 
-    public void appendPendingLocationsToSeperateFile() throws IOException {
-        String content = this.generatePendingLocations();
-        if (separateFileName != null && content != ""){
+    public void appendToSeparateFile(String content) throws IOException {
+        Files.writeString(
+            Paths.get(separateFileName),
+            content,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND
+        );
+    }
+
+    public void addSuffixToSeparateFile() throws IOException {
+        if (separateFileName != null){
             Files.writeString(
                     Paths.get(this.separateFileName),
-                    content,
+                    this.generateSuffix(),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);
