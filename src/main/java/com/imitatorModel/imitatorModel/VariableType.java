@@ -40,10 +40,10 @@ public abstract class VariableType{
 
 
     // True if need to be added to the initial state with continuous value 0
-    public Boolean is_continuous_initially_0(){return false;}
+    public boolean is_continuous_initially_0(){return false;}
 
     // True if need to be added to the initial state with discrete value 0
-    public  Boolean is_discrete_initially_0(){return false;}
+    public  boolean is_discrete_initially_0(){return false;}
 
     public String toIMITATOR(){
 		return getName();

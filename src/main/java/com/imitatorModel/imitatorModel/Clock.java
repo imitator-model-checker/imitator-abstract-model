@@ -9,7 +9,7 @@ public class Clock extends VariableType {
         return "clock";
     }
 
-    public Boolean is_continuous_initially_0(){return true;}
+    public boolean is_continuous_initially_0(){return true;}
 
 
 }

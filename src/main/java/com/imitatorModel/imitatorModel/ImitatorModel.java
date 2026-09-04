@@ -9,10 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -170,7 +166,12 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         for (VariableType v : variables) {
             if(v.is_discrete_initially_0()) {
-                sb.append("\t " + v.toIMITATOR() + " <- 0,\n");
+                if (v instanceof ImiBoolean){
+                    sb.append("\t " + v.toIMITATOR() + " <- False,\n");
+                }
+                else {
+                    sb.append("\t " + v.toIMITATOR() + " <- 0,\n");
+                }
             }
         }
         sb.append(";\n");
