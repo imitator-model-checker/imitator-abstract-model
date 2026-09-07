@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public final class LinearExpr {
+public final class LinearExpr implements UpdateTerm {
 
     private final List<Pair<VariableType, BigFraction>> terms;
     private final BigFraction constant;

@@ -30,4 +30,8 @@ public class ImiBoolean extends VariableType {
 
         return false;
     }
+
+    public BooleanExpr negate() {
+        return BooleanExpr.of(this).negate();
+    }
 }

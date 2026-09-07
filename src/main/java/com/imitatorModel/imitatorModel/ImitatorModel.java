@@ -73,6 +73,11 @@ public class ImitatorModel {
         return rational;
     }
 
+    public ImiBoolean addImiBoolean(String name) {
+        ImiBoolean bool = new ImiBoolean(name);
+        this.addVariable(bool);
+        return bool;
+    }
 
     public ImitatorModel mergeModel(ImitatorModel other) {
         ImitatorModel result = new ImitatorModel();

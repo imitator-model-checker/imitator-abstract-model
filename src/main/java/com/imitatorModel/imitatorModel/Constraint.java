@@ -9,12 +9,14 @@ public final class Constraint {
     private final Operator operator;
     private final LinearExpr rightTerm;
     private final Boolean truthConst ;
+    private final BooleanExpr booleanTerm;
 
 
     public static final Constraint TRUE = new Constraint(LinearExpr.ZERO, Operator.EQ, LinearExpr.ZERO, true);
     public static final Constraint FALSE = new Constraint(LinearExpr.ZERO, Operator.GT, LinearExpr.ZERO, false);
 
     public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm, Boolean truthConst) {
+        this.booleanTerm = null;
         this.leftTerm = leftTerm;
         this.operator = operator;
         this.rightTerm = rightTerm;
@@ -136,7 +138,18 @@ public final class Constraint {
 
     public Constraint(Operator operator, LinearExpr rightTerm) {
         this(LinearExpr.ZERO,operator,rightTerm,null);
+    }
 
+    public Constraint(ImiBoolean variable) {
+        this(BooleanExpr.of(variable));
+    }
+
+    public Constraint(BooleanExpr booleanTerm) {
+        this.leftTerm = null;
+        this.operator = null;
+        this.rightTerm = null;
+        this.truthConst = null;
+        this.booleanTerm = Objects.requireNonNull(booleanTerm);
     }
 
     public Boolean getTruthConst() {
@@ -157,6 +170,10 @@ public final class Constraint {
 
 
     public Constraint negate() {
+        if (booleanTerm != null) {
+            return new Constraint(booleanTerm.negate());
+        }
+
         Boolean negatedTruthConst =
                 (truthConst == null) ? null : !truthConst;
 
@@ -168,6 +185,9 @@ public final class Constraint {
     }
 
 	public String toIMITATOR(){
+	    if (booleanTerm != null) {
+	        return booleanTerm.toIMITATOR();
+	    }
 	    if (truthConst != null) {
             return truthConst ? "True" : "False";
         }
@@ -188,7 +208,8 @@ public final class Constraint {
         return Objects.equals(leftTerm, other.leftTerm)
                 && operator == other.operator
                 && Objects.equals(rightTerm, other.rightTerm)
-                && Objects.equals(truthConst, other.truthConst);
+                && Objects.equals(truthConst, other.truthConst)
+                && Objects.equals(booleanTerm, other.booleanTerm);
     }
 
     @Override
@@ -197,7 +218,8 @@ public final class Constraint {
                 leftTerm,
                 operator,
                 rightTerm,
-                truthConst
+                truthConst,
+                booleanTerm
         );
     }
 }

@@ -12,8 +12,6 @@ import org.logicng.formulas.Formula;
 import org.logicng.formulas.FormulaFactory;
 import org.logicng.transformations.dnf.DNFFactorization;
 
-import com.imitatorModel.bigFraction.BigFraction;
-
 import org.logicng.formulas.Variable;
 import org.logicng.formulas.Literal;
 import org.logicng.formulas.And;
@@ -275,28 +273,26 @@ public abstract class ComplexConstraint {
         return List.of(this);
     }
 
-    // public static ComplexConstraint activationCondition(List<Rational> variables) {
+
     public ComplexConstraint activationCondition() {
         return new OrNode(
             this.getActivationVariables().stream()
                 .<ComplexConstraint>map(variable ->
                     new ConstraintNode(
                         new Constraint(
-                            new LinearExpr(variable),
-                            Operator.GE,
-                            new LinearExpr(BigFraction.ONE)
+                            variable
                         )
                     ))
                 .toList()
         );
     }
     
-    public List<Rational> getActivationVariables() {
+    public List<ImiBoolean> getActivationVariables() {
         Set<String> names = new LinkedHashSet<>();
         collectVariables(this, names);
 
         return names.stream()
-                .map(v -> new Rational(v + "Activate"))
+                .map(v -> new ImiBoolean(v + "Activate"))
                 .toList();
     }
 
