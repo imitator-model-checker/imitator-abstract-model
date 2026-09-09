@@ -46,3 +46,4 @@ target/
 
 # Ignore VS Code workspace settings
 .vscode/
+.github/

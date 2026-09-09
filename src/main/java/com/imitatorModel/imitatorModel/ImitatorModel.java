@@ -73,6 +73,12 @@ public class ImitatorModel {
         return rational;
     }
 
+    public Int addInt(String name) {
+        Int integer = new Int(name);
+        this.addVariable(integer);
+        return integer;
+    }
+
     public ImiBoolean addImiBoolean(String name) {
         ImiBoolean bool = new ImiBoolean(name);
         this.addVariable(bool);
