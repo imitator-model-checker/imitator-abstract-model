@@ -15,6 +15,7 @@ public final class LinearExpr implements UpdateTerm {
     private final BigFraction constant;
 
     public static final LinearExpr ZERO = new LinearExpr(BigFraction.ZERO);
+    public static final LinearExpr ONE = new LinearExpr(BigFraction.ONE);
     public static final LinearExpr INFINITY = new LinearExpr(BigFraction.INFINITY);
     public static final LinearExpr MINUS_INFINITY = new LinearExpr(BigFraction.MINUS_INFINITY);
 
@@ -93,14 +94,24 @@ public final class LinearExpr implements UpdateTerm {
         return new LinearExpr(newTerms, this.constant.add(exp.constant));
     }
    
-     public LinearExpr minus(LinearExpr exp){ 
+
+    public LinearExpr minus(LinearExpr exp) {
         List<Pair<VariableType, BigFraction>> newTerms = terms.stream()
-            .map(p -> new Pair<VariableType, BigFraction>(
+            .map(p -> new Pair<>(
                     p.getFirst(),
-                    p.getSecond().negate()))
+                    p.getSecond()))
             .collect(Collectors.toList());
-        newTerms.addAll(exp.terms);
-        return new LinearExpr(newTerms, this.constant.add(exp.constant.negate()));
+
+        newTerms.addAll(
+            exp.terms.stream()
+                .map(p -> new Pair<>(
+                        p.getFirst(),
+                        p.getSecond().negate()))
+                .collect(Collectors.toList()));
+
+        return new LinearExpr(
+            newTerms,
+            this.constant.add(exp.constant.negate()));
     }
 
     @Override

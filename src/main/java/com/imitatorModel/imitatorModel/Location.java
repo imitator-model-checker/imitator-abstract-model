@@ -10,20 +10,22 @@ public class Location {
     private List<Pair<VariableType, LinearExpr>> rate;
     private List<Transition> transitions = new ArrayList<>();
     private Boolean isUrgent ;
+    private Boolean isAccepting;
     private List<Clock> stop ;
     private Boolean isWaiting ; //for online log only
 
-    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent, Boolean isWaiting) {
+    public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent, Boolean isWaiting, Boolean isAccepting) {
         this.name = name;
         this.invariant = (invariant != null) ? invariant : new ConstraintNode(Constraint.TRUE);
         this.rate = (rate != null) ? rate : new ArrayList<>();
         this.isUrgent = (isUrgent != null) ? isUrgent : false;
         this.isWaiting = (isWaiting != null) ? isWaiting : false;
+        this.isAccepting = (isAccepting != null) ? isAccepting : false;
         this.stop = new ArrayList<>();
     }
 
     public Location(String name) {
-        this(name, null, null, null,null);
+        this(name, null, null, null,null,null);
     }
 
     public Boolean getIsWaiting() {
@@ -88,6 +90,14 @@ public class Location {
         rate.add(new Pair<>(variable, linearTerm));
     }
 
+    public void setAccepting(Boolean isAccepting) {
+        this.isAccepting = isAccepting;
+    }
+
+    public Boolean getAccepting() {
+        return isAccepting;
+    }
+
 	public String nameToIMITATOR(){
 		return name;
 	}
@@ -116,6 +126,10 @@ public class Location {
 
         if(isUrgent){
             sb.append("urgent ");
+        }
+
+        if (isAccepting){
+            sb.append("accepting ");
         }
 
         sb.append("loc " + nameToIMITATOR() + ": invariant " + invariant.toIMITATOR());

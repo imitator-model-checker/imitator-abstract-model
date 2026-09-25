@@ -25,6 +25,10 @@ public class ListUpdates {
 
 
     public ListUpdates addUpdate(Update update) {
+        if (update == null) {
+            return this;
+        }
+
         List<Update> newUpdates = new ArrayList<>(this.updates);
         newUpdates.add(update);
         return new ListUpdates(newUpdates);
