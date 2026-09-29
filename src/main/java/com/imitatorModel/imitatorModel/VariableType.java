@@ -32,6 +32,7 @@ public abstract class VariableType{
         // && Objects.equals(getIMITATORType(), other.getIMITATORType());
     }
 
+
     @Override
     public int hashCode() {
         // return Objects.hash(name, getIMITATORType());

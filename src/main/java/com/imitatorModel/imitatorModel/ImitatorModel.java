@@ -26,6 +26,14 @@ public class ImitatorModel {
         this.variables.add(variable);
     }
 
+    public void addVariableOverwrite(VariableType variable) {
+        variables.removeIf(v ->
+            v.getName().equals(variable.getName())
+                && !v.getIMITATORType().equals(variable.getIMITATORType())
+        );
+        variables.add(variable);
+    }
+
     public void addVariables(Set<VariableType> variables) {
         this.variables.addAll(variables);
     }
@@ -73,6 +81,12 @@ public class ImitatorModel {
         return rational;
     }
 
+    public Rational addRationalOverwrite(String name) {
+        Rational rational = new Rational(name);
+        this.addVariableOverwrite(rational);
+        return rational;
+    }
+
     public Int addInt(String name) {
         Int integer = new Int(name);
         this.addVariable(integer);
@@ -89,7 +103,14 @@ public class ImitatorModel {
         ImitatorModel result = new ImitatorModel();
 
         result.addVariables(this.variables);
-        result.addVariables(other.variables);
+        // result.addVariables(other.variables);
+        for (VariableType variable : other.variables) {
+            if (variable instanceof Rational) {
+                result.addVariableOverwrite(variable);
+            } else {
+                result.addVariable(variable);
+            }
+        }
 
         result.addPTAs(this.ptas);
         result.addPTAs(other.ptas);
