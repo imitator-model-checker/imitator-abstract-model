@@ -17,7 +17,6 @@ public class ImitatorModel {
     private List<PTA> ptas;
 
     public ImitatorModel() {
-        // this.variables = new ArrayList<>();
         this.variables = new HashSet<VariableType>();
         this.ptas = new ArrayList<PTA>();
     }
