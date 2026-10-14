@@ -36,6 +36,11 @@ public class ImiBoolean extends VariableType {
         return false;
     }
 
+    @Override
+    public String initialValueToIMITATOR() {
+        return "False";
+    }
+
     public BooleanExpr negate() {
         return BooleanExpr.of(this).negate();
     }

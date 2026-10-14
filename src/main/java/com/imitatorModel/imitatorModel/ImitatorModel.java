@@ -37,7 +37,8 @@ public class ImitatorModel {
             variables.put(variable.getName(), variable);
             return variable;
         }
-        if (existing.getClass() != variable.getClass()) {
+        if (existing.getClass() != variable.getClass()
+                || !existing.getIMITATORType().equals(variable.getIMITATORType())) {
             throw new IllegalArgumentException(
                 "Variable " + variable.getName() + " is already declared as "
                 + existing.getIMITATORType() + ", cannot redeclare it as " + variable.getIMITATORType());
@@ -133,6 +134,11 @@ public class ImitatorModel {
 
     public ImiBoolean addImiBoolean(String name) {
         return (ImiBoolean) addVariable(new ImiBoolean(name));
+    }
+
+    /** Declare a FIFO queue {@code name : <elementType> queue;}, initially empty. */
+    public ImiQueue addQueue(String name, ImiQueue.ElementType elementType) {
+        return (ImiQueue) addVariable(new ImiQueue(name, elementType));
     }
 
     /**
@@ -243,12 +249,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         for (VariableType v : variables.values()) {
             if(v.is_discrete_initially_0()) {
-                if (v instanceof ImiBoolean){
-                    sb.append("\t " + v.toIMITATOR() + " <- False,\n");
-                }
-                else {
-                    sb.append("\t " + v.toIMITATOR() + " <- 0,\n");
-                }
+                sb.append("\t " + v.toIMITATOR() + " <- " + v.initialValueToIMITATOR() + ",\n");
             }
         }
         sb.append(";\n");

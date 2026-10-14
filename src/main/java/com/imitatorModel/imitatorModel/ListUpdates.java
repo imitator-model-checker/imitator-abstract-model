@@ -43,7 +43,9 @@ public class ListUpdates {
             for (int i = 0; i < updates.size(); i++) {
                 sb_updates.append(updates.get(i).toIMITATOR());
 
-                if (i < updates.size() - 1) {
+                // "if ... end" is a complete instruction: IMITATOR rejects a ";" after it
+                // ("if c then x <- 1 end y <- 2" is valid, "if c then x <- 1 end; y <- 2" is a parse error)
+                if (i < updates.size() - 1 && updates.get(i).getCondition() == null) {
                     sb_updates.append("; ");
                 }
             }

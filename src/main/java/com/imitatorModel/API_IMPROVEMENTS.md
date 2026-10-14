@@ -135,11 +135,11 @@ Tests: `FluentApiTest.autoDeclarationCanBeDisabled`, `FluentApiTest.onCollection
 **Findings while migrating** (now open items):
 - The printed DNF of a guard can depend on how its `AND`s are nested. LogicNG's `FormulaFactory` caches n-ary `AND`s by operand set. When conjuncts collapse (duplicates such as `beforeLogEnd` appearing twice, or bounds that simplify to `True` with a 0/∞ interval), an inner cached `AND` decides the conjunct order. Example: `and(and(yIn, tBeforeQ), B)` and `and(yIn, tBeforeQ, B)` can print differently. `x.and(y).and(z)` reproduces an `addConstraint` chain exactly. See §3.6.
 - A transition whose guard simplifies to `False` prints nothing but still adds an empty line to its location. See §4.2.
-- Kept unchanged and marked `NOTE` in the code (semantic decisions for the pattern author):
-  - `DetectOccurrence` 2.1/2.2 lack `x < lasting`.
-  - `LongestSequence` 2.5 does not store `cur_len` for events.
-  - `LongestTimeframe` 1.12 goes to `l2` when the signal constraint is violated at `t = M`.
-  - `AlwaysPrecedence` 2.29 (two signals) uses `NoRepeatTrigger` where the other cases use `NoRepeatPrecedent`.
+- First kept unchanged and marked `NOTE` in the code, since fixed by the pattern author (the `NOTE` markers are gone). Each fix has regression tests in CherLog (`detectOccurrenceLasting*`, `longestsequence5-9`, `longesttimeframe5-9`, `AlwaysPrecedence11`):
+  - `DetectOccurrence` 2.1/2.2 lacked `x < lasting`.
+  - `LongestSequence` 2.5 did not store `cur_len` for events.
+  - `LongestTimeframe` 1.12 went to `l2` when the signal constraint was violated at `t = M`.
+  - `AlwaysPrecedence` 2.29 (two signals) used `NoRepeatTrigger` where the other cases use `NoRepeatPrecedent`.
 
 ---
 
@@ -162,6 +162,16 @@ Tests: `FluentApiTest.autoDeclarationCanBeDisabled`, `FluentApiTest.onCollection
 2. Updates guard on `lock = 1` (a type error on a `bool`); the offline translation uses `lock`.
 3. Updates always use `noSample` and the lock, so a log without signals syncs on an undeclared `noSample`.
 4. Updates assign `xActivate` flags, but the initial model is built without them (`log2IMITATOR()` passes `needVariableActivationFlag = false`): `fActivate is assigned but never defined`.
+
+### A.7 Queues (recording values along a run)
+
+For CherLog's timestamp recording (`monitoring-patterns-imitator/TimestampRecording.md`): `ImiQueue` (`name : <rational|int|bool> queue;`, initialised `queue()`), `model.addQueue(name, ElementType)`, updates `q.push(e)` (`queue_push(e, q)`), `q.clear()` (`q <- queue()`), `q.assign(other)` (copy). A push is an `Update` whose term is a side effect (`UpdateTerm.isSideEffect()`), so it composes with `when`, `doing`, `ListUpdates`. Init values now come from `VariableType.initialValueToIMITATOR()`; `addVariable` also throws on a same-class variable with another IMITATOR type (`rational queue` vs `int queue`). CherLog `.imi` output unchanged (183/183 tests).
+
+Only queues: they cover the needs (append in order, reset, snapshot) and print in insertion order in the accepting states. Lists (prepend, so reversed) and stacks add nothing for now; `queue_pop`/`queue_top`/`queue_length` in guards are not wrapped (not needed, and `queue_top` on an empty queue aborts IMITATOR).
+
+**[verified]** with IMITATOR 3.4 (`QueueTest` + probes): a clock or a parameter in `queue_push` is an error (*Unable to use clock in this context*), so a time must be pushed through a discrete variable set by the log; `int` is not converted to `rational`; a side effect in a guard is an error; `queue_push` works inside `if … then … end` and with `<-`; `best <- ts` copies by value; updates are sequential; with parameters each accepting state (one per parameter region) carries its own queue, printed `ts = queue([1, 7/2])`; `queue_length(q)` is accepted in a property; `[]` is not an empty list (`list([])` is).
+
+**Bug fixed: no `;` after a conditional update.** `ListUpdates` printed `if c then x <- 1 end ; y <- 2`, which IMITATOR rejects (Menhir parse error) **[verified]**; `if c then x <- 1 end y <- 2` is valid. Never hit before because a conditional update was always the last one; hit by CherLog's timestamp recording (`extremumTime` before `curComputed` in `Extrema`). `ListUpdates.toIMITATOR` now omits the separator after a conditional update (`QueueTest.conditionalUpdateFollowedByAnotherUpdate`).
 
 ## 0. Priorities at a glance (remaining)
 

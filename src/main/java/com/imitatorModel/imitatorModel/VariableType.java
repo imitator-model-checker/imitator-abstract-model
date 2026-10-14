@@ -52,6 +52,11 @@ public abstract class VariableType{
     // True if need to be added to the initial state with discrete value 0
     public  boolean is_discrete_initially_0(){return false;}
 
+    /** Literal of the default initial value of a discrete variable (used when {@link #is_discrete_initially_0()}). */
+    public String initialValueToIMITATOR() {
+        return "0";
+    }
+
     public String toIMITATOR(){
 		return getName();
 	}

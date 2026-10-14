@@ -7,7 +7,8 @@ import com.imitatorModel.bigFraction.BigFraction;
 /**
  * Assignment {@code variable := term}, optionally conditional ({@code if condition then ... end}).
  * Prefer the fluent forms: {@code x.reset()}, {@code i.assign(i.plus(1))}, {@code b.assign(true)},
- * {@code u.when(cond)}.
+ * {@code u.when(cond)}. A queue push ({@code q.push(e)}) is an update whose term is a side effect: {@link #getVariable()}
+ * is the queue, and it prints as {@code queue_push(e, q)}.
  */
 public final class Update {
 
@@ -40,6 +41,10 @@ public final class Update {
     }
 
     public Update(ImiBoolean variable, BooleanExpr term) {
+        this((ComplexConstraint) null, variable, term);
+    }
+
+    public Update(ImiQueue variable, QueueExpr term) {
         this((ComplexConstraint) null, variable, term);
     }
 
@@ -109,11 +114,15 @@ public final class Update {
     }
 
     public String toIMITATOR() {
+        // a side effect (e.g. queue_push(e, q)) is printed alone, without "variable <- "
+        String statement = term.isSideEffect()
+                ? termToIMITATOR()
+                : variable.toIMITATOR() + " <- " + termToIMITATOR();
         if (condition != null) {
-            return "if " + condition.toIMITATOR()  + " then " + variable.toIMITATOR() + " <- " + termToIMITATOR() + " end ";
+            return "if " + condition.toIMITATOR()  + " then " + statement + " end ";
         }
         else {  
-            return variable.toIMITATOR() + " <- " + termToIMITATOR();
+            return statement;
         }
     }
 
@@ -134,6 +143,11 @@ public final class Update {
         if (!(variable instanceof ImiBoolean) && term instanceof BooleanExpr) {
             throw new IllegalArgumentException(
                 "Variable " + variable.getName() + " is not boolean and cannot receive a BooleanExpr");
+        }
+        if ((variable instanceof ImiQueue) != (term instanceof QueueExpr)) {
+            throw new IllegalArgumentException(variable instanceof ImiQueue
+                ? "Queue " + variable.getName() + " can only be updated with push, clear or a queue copy"
+                : "Variable " + variable.getName() + " is not a queue and cannot receive a queue value");
         }
     }
 
