@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-public class Parameter extends VariableType {
+public class Parameter extends NumericVariable {
     private Constraint constraint = null; 
 
     public Parameter(String name) {

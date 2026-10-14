@@ -1,6 +1,7 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -77,17 +78,25 @@ public class Transition {
             guards = List.of(dnfGuard);
         }
 
+        // Sorted by name so that the output does not depend on Set iteration order
+        List<Action> sortedActions = actions.stream()
+                .sorted(Comparator.comparing(Action::getName))
+                .toList();
+        List<Location> sortedDestinations = destinations.stream()
+                .sorted(Comparator.comparing(Location::getName))
+                .toList();
+
         StringBuilder sb = new StringBuilder();
 
         for (ComplexConstraint g : guards) {
 
             if (g instanceof ConstraintNode c &&
-                c.getConstraint() == Constraint.FALSE) {
+                c.getConstraint().isFalse()) {
                 continue;
             }
 
         if (actions.isEmpty()) {
-            for (Location dest : destinations) {
+            for (Location dest : sortedDestinations) {
                 sb.append("\n\twhen ")
                 .append(g.toIMITATOR())
                 .append(updates.toIMITATOR())
@@ -96,8 +105,8 @@ public class Transition {
                 .append(";");
             }
         } else {
-            for (Action a : actions) {
-                for (Location dest : destinations) {
+            for (Action a : sortedActions) {
+                for (Location dest : sortedDestinations) {
                     sb.append("\n\twhen ")
                     .append(g.toIMITATOR())
                     .append(" sync ")

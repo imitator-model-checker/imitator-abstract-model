@@ -1,7 +1,7 @@
 package com.imitatorModel.imitatorModel;
 import com.imitatorModel.bigFraction.BigFraction;
 
-public class Rational extends VariableType {
+public class Rational extends NumericVariable {
     private BigFraction value;
 
     public Rational(String name) {
@@ -16,6 +16,14 @@ public class Rational extends VariableType {
     @Override
     public BigFraction getValue() {
         return value;
+    }
+
+    @Override
+    public String valueToIMITATOR() {
+        if (value != null && value.isInfinite()) {
+            throw new IllegalStateException("Rational constant " + getName() + " cannot be infinite in IMITATOR");
+        }
+        return super.valueToIMITATOR();
     }
 
     public String getIMITATORType(){

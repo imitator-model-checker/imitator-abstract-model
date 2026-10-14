@@ -17,10 +17,6 @@ public final class BigFraction  implements Comparable<BigFraction> {
     private final BigInteger den;   // always positive
     private final boolean infinite;
 
-    public  String getIMITATORType(){
-        return "BigFraction";
-    }
-
     public static final BigFraction ZERO = new BigFraction(BigInteger.ZERO);
     public static final BigFraction ONE = new BigFraction(BigInteger.ONE);
     public static final BigFraction INFINITY = new BigFraction(true);
@@ -34,6 +30,14 @@ public final class BigFraction  implements Comparable<BigFraction> {
 
     public BigFraction(BigInteger n) {
         this(n, BigInteger.ONE);    // cast int n as n/1
+    }
+
+    public static BigFraction of(long n) {
+        return new BigFraction(BigInteger.valueOf(n));
+    }
+
+    public static BigFraction of(long n, long d) {
+        return new BigFraction(BigInteger.valueOf(n), BigInteger.valueOf(d));
     }
 
     public BigFraction(int n) {
@@ -182,6 +186,10 @@ public final class BigFraction  implements Comparable<BigFraction> {
         return num.intValueExact();
     }
 
+    public boolean isInfinite() {
+        return infinite;
+    }
+
     // Returns -1, 0, or 1 as this fraction is negative, zero, or positive.
     public int signum() {
         return num.signum();
@@ -253,6 +261,10 @@ public final class BigFraction  implements Comparable<BigFraction> {
     public static BigFraction random(int denominator) {
         if (denominator <= 0) {
             throw new IllegalArgumentException("Denominator must be positive");
+        }
+
+        if (denominator == 1) {
+            return BigFraction.ONE;
         }
 
         int numerator = new Random().nextInt(denominator-1) + 1; // random integer in [1, denominator-1]

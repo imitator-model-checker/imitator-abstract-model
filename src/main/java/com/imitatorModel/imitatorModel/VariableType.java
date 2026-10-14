@@ -19,6 +19,12 @@ public abstract class VariableType{
     public Object getValue() {
         return null;
     }
+
+    /** IMITATOR literal of the constant value ({@code N = <literal> : type;}), or null when the variable has no value. */
+    public String valueToIMITATOR() {
+        Object value = getValue();
+        return value == null ? null : value.toString();
+    }
     
     // Asumption : there cant be 2 variables with the same name. 
     // Rely on this so when add another variable of the same name into a model (keep them as set), it doesnt overwrite/have any effect

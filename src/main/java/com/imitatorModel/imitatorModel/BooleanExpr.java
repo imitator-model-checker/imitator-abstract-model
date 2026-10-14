@@ -21,6 +21,11 @@ public final class BooleanExpr implements UpdateTerm {
         return new BooleanExpr(null, Objects.requireNonNull(variable), false);
     }
 
+    /** The variable, or null for a constant True/False. */
+    public ImiBoolean getVariable() {
+        return variable;
+    }
+
     public BooleanExpr negate() {
         return new BooleanExpr(value, variable, !negated);
     }

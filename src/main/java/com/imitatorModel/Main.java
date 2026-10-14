@@ -1,81 +1,61 @@
 /**
- * This is the main class for testing the IMITATOR Model. It creates a simple model with one PTA, two locations, and some variables, and then prints the IMITATOR representation of the model.
+ * Example: builds the train/gate model of the IMITATOR manual with the fluent API and prints it.
+ * Expected IMITATOR result for "#synth AGnot(loc[observer] = obs_bad)": p_approach > p_lower & p_lower >= 0.
  */
 
 package com.imitatorModel;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import static com.imitatorModel.imitatorModel.Imi.*;
 
-import com.imitatorModel.bigFraction.BigFraction;
 import com.imitatorModel.imitatorModel.*;
 
 public class Main {
-    public static final String output_file_name = "output.imi";
 
+    public static ImitatorModel trainGate() {
+        ImitatorModel model = new ImitatorModel().setHeaderTimestamp(false);
 
-    /**
-     * The main method is the entry point of the program. It creates a simple IMITATOR model with one PTA, two locations, and some variables, and then prints the IMITATOR representation of the model.
-     * @param args
-     */
+        Clock xt = model.addClock("xt");
+        Clock xg = model.addClock("xg");
+        Rational nbCross = model.addRational("nb_cross");
+        Parameter pApproach = model.addParameter("p_approach");
+        Parameter pLower = model.addParameter("p_lower");
+        pApproach.setConstraints(pApproach.atom(Operator.GE, c(0)));
+        pLower.setConstraints(pLower.atom(Operator.GE, c(0)));
+
+        Action approach = action("approach"), enter = action("enter"), leave = action("leave"),
+               lowerDone = action("lower_done");
+
+        PTA train = model.automaton("train");
+        Location far = train.loc("far");
+        Location near = train.loc("near").invariant(xt.le(pApproach.times(2)));
+        Location crossing = train.loc("crossing").invariant(xt.le(pApproach.times(2).plus(5)));
+        train.initial(far);
+        far.on(approach).when(nbCross.lt(3)).doing(xt.reset()).goTo(near);
+        near.on(enter).when(xt.ge(pApproach)).goTo(crossing);
+        crossing.on(leave).doing(nbCross.assign(nbCross.plus(1))).goTo(far);
+
+        PTA gate = model.automaton("gate");
+        Location up = gate.loc("up");
+        Location lowering = gate.loc("lowering").invariant(xg.le(pLower));
+        Location down = gate.loc("down");
+        gate.initial(up);
+        up.on(approach).doing(xg.reset()).goTo(lowering);
+        lowering.on(lowerDone).goTo(down);
+        down.on(leave).goTo(up);
+
+        PTA observer = model.automaton("observer");
+        Location wait = observer.loc("obs_wait");
+        Location ok = observer.loc("obs_ok");
+        Location bad = observer.loc("obs_bad");
+        observer.initial(wait);
+        wait.on(lowerDone).goTo(ok);
+        wait.on(enter).goTo(bad);
+        ok.on(enter).goTo(wait);
+
+        return model;
+    }
+
     public static void main(String[] args) {
-
-        System.out.println("Hi there!");
-
-    //     // Testing the IMITATOR Model
-    //     ImitatorModel toy_model = new ImitatorModel();
-
-    //     Clock clock1 = new Clock("x1");
-    //     Parameter param1 = new Parameter("p1");
-    //     toy_model.addVariable(clock1);
-    //     toy_model.addVariable(param1);
-
-    //     PTA pta = new PTA("pta1");
-
-    //     LinearExpr lt1 = new LinearExpr(new BigFraction(5));
-    //     lt1.addTerm(clock1, new BigFraction(3, 2)); // 1.5 as a fraction
-    //     LinearExpr lt2 = new LinearExpr(new BigFraction(5));
-    //     lt2.addTerm(param1, new BigFraction(3, 2)); // 1.5 as a fraction
-    //     List<Constraint> constraints = new ArrayList<>();
-    //     constraints.add(new Constraint(lt1, Operator.LESS_THAN_OR_EQUAL));
-    //     constraints.add(new Constraint(lt2, Operator.GREATER_THAN));
-    //     ConjunctionOfConstraints invariant = new ConjunctionOfConstraints(constraints);
-
-    //     Location loc1 = new Location("Loc1");
-    //     loc1.setInvariant(invariant);
-    //     loc1.addRate(clock1, new LinearExpr(new BigFraction(3, 2))); // 1.5 as a fraction
-    //     loc1.setUrgent();
-
-    //     Location loc2 = new Location("Loc2");
-
-    //     pta.addLocation(loc1);
-    //     pta.addLocation(loc2);
-    //     pta.setInitialLocation(loc1);
-    //     pta.addAction(new Action("a"));
-    //     pta.addAction(new Action("b"));
-    //     toy_model.addPTA(pta);
-
-    //     List<Update> updates = new ArrayList<Update>();
-    //     updates.add(new Update(clock1, lt1));
-    //     updates.add(new Update(clock1, lt2));
-
-    //     loc1.addTransition(new Transition(new ConjunctionOfConstraints(), new Action("a"), updates, loc2));
-    //     loc2.addTransition(new Transition(new ConjunctionOfConstraints(), new Action("b"), new ArrayList<Update>(), loc1));
-
-    //     System.out.println("Toy model with variables and locations added successfully.");
-    //     String toy_imitator_model = toy_model.toIMITATOR();
-    //     System.out.println(toy_imitator_model);
-
-    //     // Export the model to a file named "output.imi"
-    //     try {
-    //        Files.writeString(Path.of(output_file_name), toy_imitator_model);
-    //        System.out.println("Model exported to " + output_file_name);
-    //     } catch (IOException e) {
-    //        System.err.println("Error writing to file: " + e.getMessage());
-    //     } 
-
+        System.out.println(trainGate().toIMITATOR());
     }
 }

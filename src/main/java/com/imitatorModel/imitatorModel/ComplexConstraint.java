@@ -80,6 +80,53 @@ public abstract class ComplexConstraint {
         return new AndNode(allConstraints);      
     }
 
+    /** {@code this & others...} */
+    public ComplexConstraint and(ComplexConstraint... others) {
+        List<ComplexConstraint> all = new ArrayList<>();
+        all.add(this);
+        all.addAll(List.of(others));
+        return new AndNode(all);
+    }
+
+    /** {@code this | others...} */
+    public ComplexConstraint or(ComplexConstraint... others) {
+        List<ComplexConstraint> all = new ArrayList<>();
+        all.add(this);
+        all.addAll(List.of(others));
+        return new OrNode(all);
+    }
+
+    /** All variables occurring in the constraint (linear terms and boolean atoms). */
+    public Set<VariableType> getVariables() {
+        Set<VariableType> variables = new LinkedHashSet<>();
+        collectVariableObjects(this, variables);
+        return variables;
+    }
+
+    private static void collectVariableObjects(ComplexConstraint node, Set<VariableType> variables) {
+        if (node instanceof ConstraintNode c) {
+            Constraint constraint = c.getConstraint();
+            if (constraint.getBooleanTerm() != null) {
+                if (constraint.getBooleanTerm().getVariable() != null) {
+                    variables.add(constraint.getBooleanTerm().getVariable());
+                }
+                return;
+            }
+            variables.addAll(constraint.getLeftTerm().getCoefficients().keySet());
+            variables.addAll(constraint.getRightTerm().getCoefficients().keySet());
+            return;
+        }
+
+        if (node instanceof AndNode and) {
+            and.getChildren().forEach(child -> collectVariableObjects(child, variables));
+            return;
+        }
+
+        if (node instanceof OrNode or) {
+            or.getChildren().forEach(child -> collectVariableObjects(child, variables));
+        }
+    }
+
     public ComplexConstraint toDNF() {
         FormulaFactory f = new FormulaFactory();
 

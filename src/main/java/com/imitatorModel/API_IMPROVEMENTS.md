@@ -1,10 +1,13 @@
-# `com.imitatorModel` API: suggested improvements
+# `com.imitatorModel` API: improvements
 
-Review of the Java API in this folder (`imitatorModel/*`, `bigFraction/*`, `Main.java`) and how it is used by its main client, `monitoring-patterns-imitator` (CherLog). **No code was changed.** Everything below is a proposal.
+This document covers the Java API in this folder (`imitatorModel/*`, `bigFraction/*`, `Main.java`) and how its main client, `monitoring-patterns-imitator` (CherLog), uses it.
 
-Items tagged **[verified]** were reproduced, either with `jshell` against `target/classes` or by running IMITATOR 3.4 `-mode checksyntax` on emitted text. Untagged items come from reading the code.
+- **Part A** records the changes already made: steps 1–3 of the migration plan (A.1–A.4), then the migration of every CherLog pattern (A.5) and of the log automaton (A.6) to the fluent API, all done on 2026-10-14.
+- **Parts 0–6** are the proposals still open. Completed proposals have been removed.
 
-Usage numbers from the client codebase give a sense of where verbosity costs the most:
+Items tagged **[verified]** were reproduced, either with `jshell` against `target/classes` or by running IMITATOR 3.4 `-mode checksyntax` on emitted text.
+
+Usage numbers from the client codebase, measured before the migration, show where verbosity costs the most:
 
 | Construct in client code | Occurrences |
 |---|---|
@@ -18,179 +21,177 @@ Usage numbers from the client codebase give a sense of where verbosity costs the
 
 ---
 
-## 0. Priorities at a glance
+## A. Changes made
+
+### A.1 Step 1: bug fixes (§1 of the original review)
+
+| Bug | Fix | Files |
+|---|---|---|
+| Bool constant printed `b = true` (rejected by IMITATOR) | New `VariableType.valueToIMITATOR()`, overridden in `ImiBoolean` (`True`/`False`) and `Rational` (rejects infinity). The `var` block uses it. | `VariableType`, `ImiBoolean`, `Rational`, `ImitatorModel` |
+| `Constraint.TRUE.negate()` threw; `ConstraintNode(TRUE).negate()` gave `0 < 0 \| 0 > 0` | Both check the truth constant first and return `FALSE`/`TRUE`. Negating a single `EQ` atom with `Constraint.negate()` now throws an explicit message pointing to `ConstraintNode.negate()`. | `Constraint`, `ConstraintNode` |
+| Zero coefficients printed ` + y` or an empty string | `LinearExpr` drops zero terms. Printing joins the non-zero parts. | `LinearExpr` |
+| Like terms never merged (`x + x` ≠ `2 * x`) | `LinearExpr` stores a normalised, unmodifiable `LinkedHashMap<VariableType, BigFraction>` (merge plus drop zeros). `equals`/`hashCode` compare that map, so equal atoms now share one LogicNG variable in `toDNF()`. | `LinearExpr` |
+| `x <= y + inf` reached the output as `inf` | A side whose constant is ±∞ counts as ±∞ whatever its variables (`compareWithInfinity`, which replaces ~70 lines of `if/else` with the same truth table). `LinearExpr.toIMITATOR()` throws if an infinite constant survives (e.g. in an update). | `Constraint`, `LinearExpr`, `BigFraction.isInfinite()` |
+| Two `new Location("l1")` both added | `PTA` stores locations in a `LinkedHashMap<String, Location>` keyed by name. `addLocation` throws on a duplicate name, **except** that a waiting placeholder (online mode) is replaced by the new location of the same name. `Location` and `PTA` now override `equals(Object)`/`hashCode` (by name). | `PTA`, `Location` |
+| `Location.addTransitions` ignored its argument | Fixed. | `Location` |
+| Same-name variables silently dropped | `addVariable` returns the existing variable when name and type match, and throws when the name exists with another type. New `replaceVariable` overwrites unconditionally. `addClock/addParameter/addRational/addInt/addImiBoolean` return the declared variable. | `ImitatorModel` |
+| Clock in `if … then` update condition accepted | `Update` rejects clocks **and parameters** in conditions. IMITATOR rejects both **[verified]**. | `Update` |
+| `Update(LinearExpr, LinearExpr)` used the first variable silently | First deprecated and checked, then **removed** (with its two conditional variants) once no CherLog code used it (A.5). | `Update` |
+| Other `Update` checks | One canonical constructor `Update(ComplexConstraint condition, VariableType target, UpdateTerm term)`; every other overload delegates to it. It rejects a parameter target and a boolean/non-boolean mismatch. Fields are `final`. | `Update` |
+| False guards detected by identity (`== Constraint.FALSE`) | `Constraint.isFalse()` (also `isTrue()`). | `Transition`, `Constraint` |
+| `PTA.addLocation` added twice | Fixed as part of the map rewrite. | `PTA` |
+| NPE when a PTA has no initial location | `IllegalStateException("Automaton X has no initial location")`. | `ImitatorModel` |
+| `BigFraction.random(1)` threw | Returns `ONE`. | `BigFraction` |
+| `BigFraction.getIMITATORType()` leftover | Removed. | `BigFraction` |
+| `Main.java` dead code run at every `compile` | `exec-maven-plugin` binding removed. `Main` now builds the train/gate example with the fluent API (`Main.trainGate()`). | `Main`, `pom.xml` |
+
+**Regression tests** (new, JUnit 5, `src/test/java/com/imitatorModel/imitatorModel/`):
+- `BugFixTest`: one test per fix above, plus the historical `mergeModel` policy.
+- `DeterminismTest`: covers step 2.
+- `FluentApiTest`: covers step 3. It also asserts that the fluent construction prints exactly what the classic construction prints.
+- `ImitatorCheck`: runs `imitator -mode checksyntax` on emitted models when `$IMITATOR_BIN` is set or `imitator` is on `PATH`. Otherwise those 2 tests are skipped.
+
+Run with `IMITATOR_BIN=…/external/imitator mvn test` (25 tests, all pass). `mvn install` now runs the tests.
+
+### A.2 Step 2: deterministic output (§3.3)
+
+- Variables are declared in **insertion order** (`LinkedHashMap` keyed by name).
+- Actions are printed **sorted by name**, in the `actions:` line and when a multi-action or multi-target `Transition` is expanded. The reason: clients pass `Set.of(…)`, whose iteration order changes from one JVM run to the next.
+- Locations keep insertion order. Transition order inside a location is unchanged.
+- `ImitatorModel.setHeaderTimestamp(false)` removes the date from the header. `mergeModel` propagates the flag. The default stays `true`, so CherLog's output is unchanged.
+- A correction to the original review: `HashSet<VariableType>`/`HashSet<Action>` iteration was arbitrary but stable across runs, because `String.hashCode` is deterministic. The real run-to-run variation came from the timestamp and from `Set.of`.
+
+### A.3 Step 3: fluent API (§2) and the `DetectOccurrence` pilot
+
+New types: `Term`, `NumericVariable`, `Imi`, `TransitionBuilder`. Everything is additive, and the old constructors still work.
+
+| Feature | API |
+|---|---|
+| Variables are expressions | `Clock`, `Parameter`, `Rational` and `Int` now extend `NumericVariable implements Term`; `LinearExpr implements Term`. |
+| Arithmetic | `plus/minus(Term \| long \| BigFraction)`, `times(long \| BigFraction)`, `neg()` |
+| Comparisons → `ComplexConstraint` | `lt/le/eq/ge/gt(Term \| long)`, `cmp(Operator, Term \| long)`; `atom(Operator, Term)` returns a raw `Constraint` |
+| Boolean atoms | `b.isTrue()`, `b.isFalse()` |
+| Combinators | `c.and(…)`, `c.or(…)`; static `Imi.and/or/not`, `Imi.TRUE/FALSE`, `Imi.of(Constraint)` |
+| Numbers | `Imi.q(n)`, `Imi.q(n, d)` (`BigFraction`); `Imi.c(n)`, `Imi.c(n, d)` (`LinearExpr`); `BigFraction.of(long[, long])` |
+| Updates | `x.reset()`, `v.assign(Term \| long \| BigFraction)`, `b.assign(boolean \| ImiBoolean \| BooleanExpr)`, `u.when(cond)` (AND-ed with an existing condition), `Imi.updates(…)` |
+| Transitions | `loc.on(a…).when(g…).doing(u…).goTo(target)`; `loc.silent()…`. `goTo` adds the transition and **declares its actions on the owning PTA**. That is always safe: IMITATOR rejects a sync on an undeclared action **[verified]**. |
+| Locations | `invariant(…)`, `urgent()`, `accepting()`, `stop(Clock…)`, `flow(Clock, Term)`; all return `this` |
+| PTA / model | `model.automaton(name)`, `pta.loc(name)` (get or create), `pta.initial(l)`, `pta.actions(a…)`, `pta.hasLocation(name)` |
+| Introspection | `ComplexConstraint.getVariables()`, `LinearExpr.getCoefficients()/isConstant()/isPlusInfinity()/isMinusInfinity()`, `Update.getCondition()`, `BooleanExpr.getVariable()`, `Location.getOwner()` |
+
+**Pilot:** CherLog's `DetectOccurrence.toImitatorModel` was rewritten with the fluent API (`monitoring-patterns-imitator`, not committed). The method went from 373 to 133 lines. Verification:
+- The 7 suite tests and 6 extra cases (event with `(…]`, `ABSENCE` with parameters, `||` and `==` in signals, parametric `LASTING`, no interval) were run before and after the rewrite. All 13 `.imi` and 13 `.imiprop` files are **byte-identical** apart from the timestamp, and the IMITATOR results are identical.
+- Full CherLog suite: **88/88 pass**, as before the changes. All 108 generated `.imi` files are equivalent to the pre-change baseline up to declaration order.
+- Found while migrating: guards 21/22 were meant to contain `x < lasting`, but `guard21.addConstraint(…)` discarded its result, so the conjunct was never emitted. The pilot keeps the emitted model unchanged and marks this with a `NOTE` comment; whether to add the conjunct is a semantics decision. This is exactly the pitfall described in §4.4.
+
+### A.4 Changes visible to existing client code
+
+- `addVariable` returns `VariableType` and **throws** on a name/type conflict. `addVariables` accepts any `Collection`.
+- `mergeModel` deliberately keeps its historical lenient policy (see §3.6 for a configurable one).
+- `PTA.addLocation` **throws** on a duplicate name (except for a waiting placeholder).
+- `getLocations()` / `getVariables()` return read-only snapshots.
+- `LinearExpr.getTerms()` returns merged terms without zeros. `x + x` now prints `2 * x`.
+- `Update` throws for invalid targets and conditions. `LinearExpr.toIMITATOR()` throws on infinity.
+- Declaration order changed: variables in insertion order, actions sorted. The semantics are unchanged.
+
+### A.5 All CherLog patterns migrated to the fluent API
+
+Every pattern in `monitoring-patterns-imitator/src/main/java/com/patterns2imi/pattern/patternModel` now builds its monitor with the fluent API (not committed).
+
+| | Before | After |
+|---|---|---|
+| Lines in the 13 pattern classes | 8,026 | 2,431 (−70 %) |
+| `new Transition(` / `new ConstraintNode(new Constraint(` in pattern code | 336 / 173 | 0 / 0 |
+
+What else changed in CherLog:
+- Event and signal branches were merged where they emit the same transitions (`Count`, `LongestSequence`).
+- Guards that were repeated are now named once (`inInterval`, `beforeLogEnd`, …).
+- Transition comments are renumbered `location.k` in source order and describe the actual guards and targets.
+- `generateProperty()` of the `Always*` patterns goes through two helpers on `AlwaysPattern`.
+- A new helper `PatternUtils.logEvents(actions)` gives the log's events.
+- Debug `println`s and commented-out code were removed.
+- The known crash (`DETECT/ABSENCE` event `THEN NoRepeatTrigger` event, without `NoEarlyResponse`) used to be a `NullPointerException`. It now throws an explicit `UnsupportedOperationException`.
+
+**API changes made for the migration:**
+
+| Change | Why |
+|---|---|
+| `PTA.setAutoDeclareActions(boolean)` / `isAutoDeclareActions()` (default `true`) | Some monitors (`LongestSequence`, `LongestTimeframe` with an event) declare exactly the events of the log. If the pattern's event is absent from the log, auto-declaring it would make it an action the monitor can take **on its own** (no other automaton syncs on it). The emitted model would then be silently wrong instead of being rejected by IMITATOR. With the flag off, `goTo` declares nothing. |
+| `Location.on(Collection<Action>)` | Transitions on computed action sets ("every other event"). An empty collection gives an unsynchronized transition, as `new Transition` did. |
+| Removed `Update(LinearExpr, LinearExpr)` and its two conditional variants | No caller left. Use `target.assign(value)` / `.when(cond)`. |
+
+Tests: `FluentApiTest.autoDeclarationCanBeDisabled`, `FluentApiTest.onCollectionOfActions`.
+
+**Verification:**
+- Corpus: **8,538 runs** of CherLog, generated from the grammar, with IMITATOR replaced by `/bin/true` so that only the `.imi`/`.imiprop` are produced. It covers:
+  - every pattern form;
+  - event / signal / `||` / `!=` / `LASTING` occurrences, events absent from the log, parameters;
+  - all flag combinations;
+  - open, closed, half-empty and degenerate (0, ∞) intervals;
+  - two logs, plus the 90 suite tests.
+- The reference was produced by a pristine build of CherLog's `HEAD`. Every `.imi` and `.imiprop` is **byte-identical** apart from the timestamp line. The only differences are the 36 runs of the known crash, where the error message changed.
+- `python test/test.py`: 88/88 pass.
+
+**Findings while migrating** (now open items):
+- The printed DNF of a guard can depend on how its `AND`s are nested. LogicNG's `FormulaFactory` caches n-ary `AND`s by operand set. When conjuncts collapse (duplicates such as `beforeLogEnd` appearing twice, or bounds that simplify to `True` with a 0/∞ interval), an inner cached `AND` decides the conjunct order. Example: `and(and(yIn, tBeforeQ), B)` and `and(yIn, tBeforeQ, B)` can print differently. `x.and(y).and(z)` reproduces an `addConstraint` chain exactly. See §3.6.
+- A transition whose guard simplifies to `False` prints nothing but still adds an empty line to its location. See §4.2.
+- Kept unchanged and marked `NOTE` in the code (semantic decisions for the pattern author):
+  - `DetectOccurrence` 2.1/2.2 lack `x < lasting`.
+  - `LongestSequence` 2.5 does not store `cur_len` for events.
+  - `LongestTimeframe` 1.12 goes to `l2` when the signal constraint is violated at `t = M`.
+  - `AlwaysPrecedence` 2.29 (two signals) uses `NoRepeatTrigger` where the other cases use `NoRepeatPrecedent`.
+
+---
+
+### A.6 CherLog log automaton (`Log.java`) migrated
+
+`Log.log2IMITATOR` (offline log automaton) and `Log.updateFromLog` (online increments) use the fluent API (1,121 → 691 lines, not committed).
+- The log PTA uses `setAutoDeclareActions(false)`: it declares exactly its events, plus `sample`/`noSample` when it has signals.
+- The sample updates are built by two helpers, `valuationUpdates` and `activationUpdates`.
+- Debug `println`s were removed.
+
+**Offline:** the 8,538-run corpus (A.5) was re-run. Every `.imi`/`.imiprop` is byte-identical to the reference.
+
+**Online — a regression from A.1, now fixed.**
+- **The problem.** `updateFromLog` re-adds the location the log was waiting in, under the same name. Before A.1 this silently produced an `.imi` with **two `loc lN`**, which IMITATOR rejects (`Several locations have name lN` **[verified]**). Since A.1 (location names unique), it threw `Location lN already exists`.
+- **The fix.** `log2IMITATOR` now marks that last location as a waiting placeholder (the commented-out `setIsWaiting(true)` shows this was the intent). It is not printed, and `updateFromLog` replaces it.
+- **Verification.** A harness drives `Log` like `LiveLogReader` + `CherLog` (initial model, three update batches, suffix) for a signals-only, a mixed and an events-only log. Compared with the original client and the original API, the only difference in the log automaton is the removed duplicate placeholder (besides A.2's declaration order).
+
+**Online mode is still not usable.** Pre-existing issues, all **[verified]** with IMITATOR 3.4 on the harness output, kept unchanged and marked `NOTE` in `Log.java`:
+1. The main file references the log automaton with `#include <file>`, which IMITATOR 3.4 does not parse.
+2. Updates guard on `lock = 1` (a type error on a `bool`); the offline translation uses `lock`.
+3. Updates always use `noSample` and the lock, so a log without signals syncs on an undeclared `noSample`.
+4. Updates assign `xActivate` flags, but the initial model is built without them (`log2IMITATOR()` passes `needVariableActivationFlag = false`): `fActivate is assigned but never defined`.
+
+## 0. Priorities at a glance (remaining)
 
 | # | Change | Effort | Payoff |
 |---|---|---|---|
-| 1 | Fix the correctness bugs in §1 | small | avoids silently wrong `.imi` files |
-| 2 | Static factories plus fluent methods on `LinearExpr` and variables (§2.1–2.3) | small, additive | removes most of the boilerplate |
-| 3 | `Location.on(...)` transition builder (§2.4) | small, additive | `new Transition(g, a, null, l)` becomes one readable line |
-| 4 | `Property` builder for `.imiprop` (§3.1) | small | ends string concatenation for properties |
-| 5 | `validate()` before printing (§3.2) | medium | catches undeclared variables, actions and missing initial locations before IMITATOR does |
-| 6 | Deterministic output (§3.3) | trivial | output that can be diffed, cached and regression-tested |
-| 7 | Sealed hierarchies and records; printer split out of the model (§4) | medium–large | simpler code, exhaustive `switch` |
-| 8 | Move online mode out of `PTA`/`Location` (§4.5) | medium | core model has no I/O side effects |
-
-Items 2–6 are **additive**: the existing constructors can stay (mark them `@Deprecated` later), so CherLog keeps compiling while it migrates.
+| 1 | `Property` builder for `.imiprop` (§3.1) | small | ends string concatenation for properties |
+| 2 | `validate()` before printing (§3.2) | medium | catches undeclared variables, actions, keyword names before IMITATOR does |
+| 3 | Real initial values, parameter constraints (§3.4) | small | removes "value means constant" trap |
+| 4 | Canonical guards before DNF (§3.6) | small (output changes once) | printed guards independent of how they were built |
+| 5 | Sealed hierarchies and records; printer split out of the model (§4) | medium–large | simpler code, exhaustive `switch` |
+| 6 | Move online mode out of `PTA`/`Location` (§4.4) | medium | core model has no I/O side effects |
+| 7 | Make CherLog's online mode produce valid models (the 4 issues of A.6), then move it out of the core API (§4.4) | medium | online monitoring works |
 
 ---
 
-## 1. Correctness bugs and pitfalls (fix first)
+## 1. Remaining correctness issues
 
-### 1.1 `ImiBoolean` constant prints lowercase `true`/`false` **[verified]**
-[`ImitatorModel.generateVarDeclaration`](imitatorModel/ImitatorModel.java#L166) appends `variable.getValue()`, which for `ImiBoolean("b", true)` is `Boolean.toString()`, so the output is `b = true: bool;`. IMITATOR rejects it with `Expression "true" uses undeclared variable or constant`.
-**Fix:** give each variable class its own `valueToIMITATOR()` (`True`/`False` for bool, `BigFraction` formatting for rational).
-
-### 1.2 Negating `TRUE`/`FALSE` is broken **[verified]**
-- `Constraint.TRUE.negate()` throws `IllegalStateException: Unexpected operator: EQ`. The reason: `TRUE`/`FALSE` are stored as `0 = 0` / `0 > 0`, and `Operator.getInverse()` has no `EQ` case.
-- `new ConstraintNode(Constraint.TRUE).negate()` returns `0 < 0 | 0 > 0`. That is a disjunction, so used as an **invariant** it throws "Invariant contains disjunction"; used as a guard it produces two dead transitions.
-
-**Fix:** in `Constraint.negate()` and `ConstraintNode.negate()`, check `truthConst` **first** and return `FALSE`/`TRUE`. Better still, make TRUE/FALSE their own node type (§4.1) instead of a `Constraint` that happens to carry a flag.
-
-### 1.3 `LinearExpr.toIMITATOR` with zero coefficients **[verified]**
-`new LinearExpr(x, ZERO).add(y)` prints ` + y`. An expression whose only term has coefficient 0 prints the empty string, which gives `invariant  <= 3`. A comment on [line 169](imitatorModel/LinearExpr.java#L169) already flags this.
-**Fix:** filter out zero terms before joining (`String.join(" + ", nonZeroTerms)`).
-
-### 1.4 `LinearExpr` never merges like terms **[verified]**
-`x + x` prints `x + x`, and `new LinearExpr(x).add(x).equals(new LinearExpr(x, 2))` is `false`. As a result, `equals`/`hashCode`, which `toDNF()` relies on to share LogicNG variables, treat equal expressions as different atoms.
-**Fix:** store terms as a `LinkedHashMap<VariableType, BigFraction>` and normalise in the constructor (merge, drop zeros). §4.2 has a sketch.
-
-### 1.5 Infinity can reach the output **[verified]**
-`BigFraction.INFINITY.toString()` is `inf`, which IMITATOR does not parse (`x <= inf` gives a Menhir parse error). The `Constraint` constructor simplifies only when an entire side *equals* `LinearExpr.INFINITY`; `x <= y + inf` is printed as is.
-**Fix:** in the `Constraint` constructor, treat any side with an infinite constant as ±∞ (true/false by operator). Also make `LinearExpr.toIMITATOR` throw if an infinite constant survives.
-
-### 1.6 `Location.equals(Location)` / `PTA.equals(PTA)` overload instead of override **[verified]**
-`equals(Location o)` does not override `equals(Object)`, so `LinkedHashSet<Location>` falls back to identity. `addLocation(new Location("l1"))` called twice adds **two** `l1` locations (the "Location already exists" check never fires), and IMITATOR then fails on the duplicate. `PTA` has the same problem and no `hashCode` either.
-**Fix:** `@Override public boolean equals(Object o)` plus `hashCode` on `name`. Better, key locations by name in a `LinkedHashMap<String, Location>`.
-
-### 1.7 `Location.addTransitions` ignores its argument
-[`Location.java:84-87`](imitatorModel/Location.java#L84-L87): `transitions.addAll(transitions)` (should be `transition`). The method duplicates the existing list instead of adding the new transitions.
-
-### 1.8 Same-name variables silently dropped **[verified]**
-`VariableType.equals` compares only `name`. `model.addVariable(new ImiBoolean("b", true)); model.addVariable(new Clock("b"));` keeps only the boolean, with no warning. `addVariableOverwrite` replaces only when the **type differs**: a same-type variable with a different value keeps the *old* value.
-**Fix:** have `addVariable` return the existing variable when name and type match, and throw when the name matches but the type differs. Expose an explicit `replaceVariable` for the overwrite case.
-
-### 1.9 Conditional updates may reference clocks **[verified]**
-`Update(condition, …)` accepts any `ComplexConstraint`. IMITATOR rejects `if x <= 1 then … end` when `x` is a clock (`Clock x found in if …`).
-**Fix:** check in the constructor that the condition contains only discrete variables (bool/int/rational).
-
-### 1.10 Other smaller issues
-- `Update(LinearExpr term1, LinearExpr term2)` silently uses the **first variable** of `term1` as the target and throws `IndexOutOfBounds` if `term1` is constant. Remove it; the target of an update is a variable, not an expression.
-- `Transition.toIMITATOR` detects false guards with `==` identity (`c.getConstraint() == Constraint.FALSE`). Use `Boolean.FALSE.equals(c.getConstraint().getTruthConst())`.
-- `PTA.addLocation` calls `locations.add(location)` twice.
-- `generateInitialization` throws NPE when a PTA has no initial location. It should raise a clear error, or `validate()` should catch it (§3.2).
 - `Int`/`Rational`/`ImiBoolean` "value" means **constant definition** (`N = 3 : int`), not initial value. A discrete variable therefore cannot start at a non-default value. See §3.4.
 - `Clock.is_continuous_initially_0()` always returns `true`: every clock is forced to `= 0` in `init`, with no opt-out.
-- `Parameter` holds a **single** `Constraint` (`setConstraints` is singular despite its name; `geConstraint` is a typo for `getConstraint`). Parameters are not constrained to `>= 0` by default, which IMITATOR guidance recommends.
-- `BigFraction.random(1)` calls `nextInt(0)`, which throws `IllegalArgumentException`.
-- `BigFraction.getIMITATORType()` returns `"BigFraction"`, a leftover with no meaning.
+- `Parameter` holds a **single** `Constraint` (`setConstraints` is singular despite its name; `geConstraint` is a typo for `getConstraint`). Parameters are not constrained to `>= 0` by default.
 - `ImitatorModel.mergeModel` shares `PTA` objects between the source and merged models (mutations leak) and does not detect two PTAs with the same name.
-- `Main.java` contains only commented-out code that no longer compiles (`ConjunctionOfConstraints` no longer exists), but `pom.xml` runs it during `compile` through `exec-maven-plugin`. Replace it with a real smoke test (§5) and remove the exec binding.
+- `ImitatorModel.addPTA` does not reject a duplicate PTA name (`automaton(name)` does).
 
 ---
 
-## 2. Less verbose invocation
+## 2. Less verbose invocation (remaining)
 
-The goal is to make Java read like the `.imi` it produces. All of the following can be **added** next to the current API.
-
-### 2.1 Static factory entry point: `Imi`
-
-```java
-public final class Imi {
-    public static BigFraction q(long n)          { return new BigFraction((int) n); }
-    public static BigFraction q(long n, long d)  { return new BigFraction((int) n, (int) d); }
-    public static LinearExpr  c(long n)          { return new LinearExpr(q(n)); }
-    public static LinearExpr  c(long n, long d)  { return new LinearExpr(q(n, d)); }
-    public static Action      action(String n)   { return new Action(n); }
-
-    public static ComplexConstraint and(ComplexConstraint... cs) { return new AndNode(List.of(cs)); }
-    public static ComplexConstraint or (ComplexConstraint... cs) { return new OrNode(List.of(cs)); }
-    public static ComplexConstraint not(ComplexConstraint c)     { return c.negate(); }
-    public static final ComplexConstraint TRUE  = new ConstraintNode(Constraint.TRUE);
-    public static final ComplexConstraint FALSE = new ConstraintNode(Constraint.FALSE);
-}
-```
-Used through `import static com.imitatorModel.imitatorModel.Imi.*;`.
-
-### 2.2 Variables behave as expressions
-
-Today every variable is wrapped by hand: `LinearExpr t = new LinearExpr(model.addClock("t"));`. Instead, have `VariableType` (or a `Term` interface shared with `LinearExpr`) expose arithmetic and comparisons:
-
-```java
-public interface Term {                    // implemented by LinearExpr and by numeric VariableTypes
-    LinearExpr expr();                     // variable -> 1·v + 0
-    default LinearExpr plus(Term o)         { return expr().add(o.expr()); }
-    default LinearExpr plus(long k)         { return expr().add(q(k)); }
-    default LinearExpr minus(Term o)        { return expr().minus(o.expr()); }
-    default LinearExpr times(BigFraction k) { … }
-
-    default ComplexConstraint lt(Term o) { return atom(this, Operator.LT, o); }
-    default ComplexConstraint le(Term o) { … }
-    default ComplexConstraint eq(Term o) { … }
-    default ComplexConstraint ge(Term o) { … }
-    default ComplexConstraint gt(Term o) { … }
-    default ComplexConstraint le(long k) { return le(c(k)); }   // and so on for each operator
-    // returns ComplexConstraint (already wrapped in a ConstraintNode)
-}
-```
-
-Combining constraints also gets shorter: `ComplexConstraint.and(other)` / `.or(other)` instead of `addConstraint(other, LogicalOperator.AND)`.
-
-### 2.3 Updates read as assignments
-
-```java
-Update u1 = x.reset();                    // x := 0
-Update u2 = i.assign(i.plus(1));          // i := i + 1
-Update u3 = b.assign(true);               // b := True
-Update u4 = cur.assign(t).when(flag);     // if flag then cur := t end
-```
-These replace the 18 overloaded `Update` constructors, which differ only in the combination of `(Constraint | ComplexConstraint | none) × (LinearExpr | Boolean | ImiBoolean | BooleanExpr | lists)`. Keep a single canonical constructor `Update(ComplexConstraint condition, VariableType target, UpdateTerm term)` and validate the types there.
-
-`ListUpdates` can disappear from the public API: a transition can take `Update...` or `List<Update>` directly.
-
-### 2.4 Transition builder on `Location`
-
-```java
-l1.on(a).when(t.lt(M), beforeLogEnd).goTo(l1);
-l1.on(a).when(M.le(t), t.le(N), beforeLogEnd).doing(cur.reset()).goTo(lDetected);
-l2.silent().when(t.ge(N)).goTo(lUnsat);                      // ε-transition, no sync
-```
-`on(...)` returns a small mutable `TransitionBuilder`; `goTo(...)` creates the `Transition` and calls `addTransition`. Varargs in `when(...)` are combined with AND.
-
-### 2.5 Location / PTA / model builders
-
-```java
-PTA monitor = model.automaton("monitor");          // creates and registers the PTA
-Location l1 = monitor.loc("l1").invariant(t.le(N)); // created, added, returned
-Location ok = monitor.loc("l_detected").urgent();
-monitor.initial(l1);
-monitor.actions(logEnd, a);                         // varargs
-```
-- `PTA.loc(name)` returns the existing location or creates it, which removes the `new Location` + `addLocation` pair.
-- `urgent()`, `accepting()`, `stop(Clock...)`, `flow(Clock, rate)` return `this` for chaining. Use plain `boolean` instead of `Boolean` for the flags.
-- `Location.goTo` / `on` could **auto-declare** the action on the owning PTA (each `Location` keeps a back-reference to its `PTA`). Declaring actions is easy to forget, and IMITATOR's broadcast semantics make a missing declaration a silent bug. It should be opt-out, because declaring an action in a PTA *changes* synchronization semantics.
-
-### 2.6 Before / after on real client code
-
-From `DetectOccurrence.toImitatorModel` (CherLog), the "guard 12" transition:
-
-```java
-// before (13 lines)
-ComplexConstraint guard12 = AndNode.fromConstraints( List.of(
-        new Constraint(M, isLeftClosed ? Operator.LE : Operator.LT, t),
-        new Constraint(t, isRightClosed ? Operator.LE : Operator.LT, N)
-));
-guard12 = guard12.addConstraint(beforeLogEnd);
-Transition tr12 = new Transition(guard12, action, null, l_detected);
-l1.addTransition(tr12);
-```
-```java
-// after (3 lines)
-l1.on(action)
-  .when(M.cmp(isLeftClosed ? LE : LT, t), t.cmp(isRightClosed ? LE : LT, N), beforeLogEnd)
-  .goTo(lDetected);
-```
-(`cmp(Operator, Term)` covers interval endpoints that are open or closed depending on a flag, a case that comes up often in CherLog.)
+- `ListUpdates` can disappear from public signatures: `Transition` could take `List<Update>` directly. The builder already hides it.
+- `Location` and `PTA` flags still use `Boolean` (nullable) instead of `boolean`.
+- Overloads that take a `Constraint` (e.g. `addConstraint(Constraint)`) could be dropped: CherLog no longer uses them, except `Log.updateFromLog` to reproduce the `lock = 1` guard (A.6).
 
 ---
 
@@ -211,24 +212,27 @@ String text = p.toIMITATOR();
 ```
 - Supported forms: `EF`, `AGnot`, `AG`, `AF`, `EU`, `AU`, `EFpmin/pmax`, `EFtmin`, `CycleThrough`, `IM`, `BCcover`, `Valid`, `DeadlockFree`.
 - Because it takes `PTA`/`Location` objects, a renamed location breaks at compile time instead of yielding an unreachable-location result.
-- State predicates may only use discrete variables. `Sp.cmp(Term…)` should reject clocks and parameters, as IMITATOR does.
+- State predicates may only use discrete variables. `Sp.cmp(Term…)` should reject clocks and parameters, as IMITATOR does. `ComplexConstraint.getVariables()` already provides the check.
 - Timed variants (`EF_[a,b]`) should check that a clock named `global_time` exists.
 
 ### 3.2 `ImitatorModel.validate()` → `List<Diagnostic>`
 
 Run it before `toIMITATOR()` (or automatically, with a `strict` flag). Checks:
-- every PTA has an initial location, and it belongs to that PTA;
-- every transition target belongs to the same PTA;
-- every `sync a` action is declared in the PTA's `actions` (and the reverse: a declared but unused action blocks the whole network under broadcast);
-- every variable used in guards, invariants, updates and rates is declared in the model, with a type consistent with its use (no `int` in a clock constraint, no clock in a conditional update, no parameter update);
+- every PTA has an initial location, and it belongs to that PTA (today: only a clear error at print time);
+- every transition target belongs to the same PTA (`Location.getOwner()` now makes this easy);
+- every `sync a` action is declared in the PTA's `actions`. The fluent builder now guarantees this (unless `setAutoDeclareActions(false)`); transitions built with `new Transition` still need the check. Also the reverse: a declared but unused action blocks the whole network under broadcast. That is sometimes intended (e.g. `logEnd` in CherLog monitors), so it should be a warning;
+- an action declared by **only one** automaton can be taken by it alone at any time. In a monitor this usually means the log does not contain that event (see A.5), so it should be a warning;
+- every variable used in guards, invariants, updates and rates is declared in the model, with a type consistent with its use (no `int` in a clock constraint);
 - names do not collide with IMITATOR keywords (`loc`, `init`, `do`, `done`, `A`, `E`, `EF`, `U`, `is`, `in`, …). **[verified]** A bool named `done` makes IMITATOR fail with a bare Menhir parse error. See the `imitator-modeling` skill pitfalls;
 - no disjunction in invariants (already checked, but only at print time and as an exception);
 - variables declared but never read. IMITATOR removes them with a warning, as seen with `lock`/`logEndTime` in generated test models.
 
-### 3.3 Deterministic, configurable output
-- `variables` is a `HashSet`, and `PTA.actions` and `Transition.actions` are `HashSet`/`Set.of`, so declaration and action order change between JVM runs (for example `actions: a, logEnd, b, ;`). Use `LinkedHashSet` / `LinkedHashMap`, or sort by name when printing.
-- The header embeds `ZonedDateTime.now()`, so two identical models never compare equal byte for byte. Make the timestamp optional (`PrintOptions.timestamp(false)`).
-- A `PrintOptions` record could also cover: comment banners on/off, `:=` vs `<-` syntax, indentation, grouping same-type variables on one line (`x, y : clock;`).
+### 3.3 Configurable output
+The timestamp is optional now (A.2). A `PrintOptions` record could also cover:
+- comment banners on/off;
+- `:=` vs `<-` syntax;
+- indentation;
+- grouping same-type variables on one line (`x, y : clock;`).
 
 ### 3.4 Real initial values and init constraints
 - Separate **constants** (`N = 3 : int;`) from **initial values** (`i := 3` in `init.discrete`). For example: `model.addInt("i").init(3)` vs `model.constInt("N", 3)`.
@@ -242,14 +246,15 @@ model.writeTo(Path imi);                         // Files.writeString(...)
 property.writeTo(Path imiprop);
 ImitatorResult r = Imitator.run(imitatorBin, imi, imiprop, "-mode", "statespace");  // ProcessBuilder wrapper
 ```
-CherLog already has this logic (temp dirs, `.res` parsing); moving a minimal, generic version into this library would let other clients reuse it.
+CherLog already has this logic (temp dirs, `.res` parsing). The test helper `ImitatorCheck` is a minimal start.
 
 ### 3.6 Model manipulation helpers
-- `mergeModel` should **copy** the PTAs, offer a conflict policy (`KEEP_LEFT`, `KEEP_RIGHT`, `FAIL`) instead of the hard-coded "rational from the right overwrites", and detect duplicate PTA names.
+- `mergeModel` should **copy** the PTAs and offer a conflict policy (`KEEP_LEFT`, `KEEP_RIGHT`, `FAIL`) instead of the hard-coded "a rational from the right replaces another type; anything else is kept from the left".
 - `PTA.rename(String)` / `Location.rename(...)` / `prefixLocations("mon_")`, to avoid name clashes when composing.
 - `model.findVariable(name)` / `pta.findAction(name)` returning `Optional`.
-- `ImitatorModel.toString()` = `toIMITATOR()` for easier debugging. `PTA.toDot()` to render an automaton in Graphviz, handy when debugging pattern translations.
-- `LinearExpr.simplify()` / `ComplexConstraint.simplify()`: constant folding, dropping `True` conjuncts, collapsing `False` disjuncts. Today the DNF pass does part of this only when printing transitions, not invariants.
+- `ImitatorModel.toString()` = `toIMITATOR()` for easier debugging. `PTA.toDot()` to render an automaton in Graphviz.
+- `ComplexConstraint.simplify()`: dropping `True` conjuncts, collapsing `False` disjuncts. Today the DNF pass does part of this only when printing transitions, not invariants.
+- **Canonical guards before DNF.** Today the printed DNF can depend on the nesting of `AND`s, because LogicNG caches n-ary `AND`s by operand set (A.5). Flattening nested `AND`/`OR` and removing duplicate conjuncts before calling LogicNG would make the output depend only on the guard's content, not on how it was built. This changes existing outputs once (conjunct order only), so it needs its own regression run with the CherLog corpus.
 
 ---
 
@@ -265,60 +270,53 @@ public record Or(List<Guard> children)                             implements Gu
 public enum   Const implements Guard { TRUE, FALSE }
 ```
 - This replaces `ComplexConstraint` + `ConstraintNode` + `AndNode` + `OrNode` + the `truthConst` / `booleanTerm` fields of `Constraint`. Today `Constraint` is in practice a union of three things: a linear atom, a boolean atom, and a truth constant.
-- `instanceof` chains in `toFormula`, `print`, `haveDisjunction`, `collectVariables` become exhaustive `switch` expressions, so the compiler flags a missing case.
-- The same treatment applies to `VariableType` → `sealed interface Variable permits Clock, Parameter, IntVar, RationalVar, BoolVar`, each a `record(String name)`.
-- `Pair<T,U>` → `record Pair<T,U>(T first, U second)`, or better, remove it: `LinearExpr` uses a `Map`, and `Location.rate` a `Map<Clock, LinearExpr>`.
-- Fold the infinity simplifications of the `Constraint` constructor (~100 lines of `if/else`) into a static `Guard.atom(l, op, r)` factory that returns `Const.TRUE/FALSE` when decidable. The constructor stays trivial.
+- `instanceof` chains in `toFormula`, `print`, `haveDisjunction`, `collectVariables`, `getVariables` become exhaustive `switch` expressions.
+- The same treatment applies to `VariableType` → `sealed interface Variable permits Clock, Parameter, IntVar, RationalVar, BoolVar`. (`NumericVariable` already groups the four numeric kinds.)
+- `Pair<T,U>` → `record`, or remove it: `LinearExpr` already uses a map internally, and `Location.rate` could be a `Map<Clock, LinearExpr>`.
+- `Constraint` still simplifies in its constructor (positive clocks vs 0, infinity). A static `Guard.atom(l, op, r)` factory returning `Const.TRUE/FALSE` would keep the record trivial.
+- `LinearExpr` could become `record LinearExpr(Map<VariableType, BigFraction> coeffs, BigFraction constant)`, since normalisation is done.
 
-### 4.2 Normalised `LinearExpr`
-```java
-public record LinearExpr(Map<Variable, BigFraction> coeffs, BigFraction constant) {
-    public LinearExpr { coeffs = normalise(coeffs); }   // merge, drop zeros, LinkedHashMap → unmodifiable
-}
-```
-`equals` and `hashCode` are then correct automatically, which fixes §1.3 and §1.4 together and makes `toDNF` sharing reliable.
-
-### 4.3 Separate printing from the model
+### 4.2 Separate printing from the model
 Every class has a `toIMITATOR()`, and formatting decisions (banners, `<-`, newlines) are spread across 10 files. Move them into one `ImiPrinter` (with `PrintOptions`, §3.3) that pattern-matches over the sealed types. Benefits:
 - one place to switch `<-` → `:=` or `init =` → `init :=` (IMITATOR 3.4's preferred syntax; the current one is still accepted, as verified with 3.4);
-- output for other targets (e.g. UPPAAL XML, Graphviz) can be added without touching the model classes.
+- output for other targets (e.g. UPPAAL XML, Graphviz) can be added without touching the model classes;
+- a transition whose guard simplifies to `False` would print nothing at all. Today it leaves an empty line in its location (A.5).
 
-### 4.4 Consistent mutability
-The model mixes immutable value types (`LinearExpr`, `ListUpdates.addUpdate` returning a copy) with mutable ones (`Location`, `PTA`, `Transition.guard`, which is not final), and `ComplexConstraint.addConstraint` returns a new node. Users write `guard = guard.addConstraint(...)` and forgetting the assignment is a silent bug. Pick one convention:
-- **expressions and constraints immutable** (records), with combinators named as values (`and`, `plus`) so nobody expects mutation;
+### 4.3 Consistent mutability
+The model mixes immutable value types (`LinearExpr`, `ComplexConstraint`, `Update`, `ListUpdates.addUpdate` returning a copy) with mutable structure (`Location`, `PTA`, `Transition.guard`). `ComplexConstraint.addConstraint` returns a new node, and forgetting to reassign is a silent bug: it happened in `DetectOccurrence` (A.3). The fluent API follows the intended convention:
+- **expressions and constraints immutable**, with combinators named as values (`and`, `plus`);
 - **structure mutable** through builders (`PTA`, `Location`), with methods returning `this`.
 
-### 4.5 Move online mode into its own class
+Remaining work: deprecate `addConstraint`/`addConstraints` (the names suggest mutation) in favour of `and`/`or`.
+
+### 4.4 Move online mode into its own class
 `PTA.separateFileName`, `pendingOnlineLocations`, `addOnelineLocation` (typo), `drainPendingLocations`, `appendToSeparateFile`, `addSuffixToSeparateFile`, `Location.isWaiting`, and `ImitatorModel.toOnlineIMITATOR` are all specific to the CherLog online log. Problems they cause:
 - `PTA.toIMITATOR()` **writes a file** as a side effect when `separateFileName` is set;
-- `Location.toIMITATOR()` returns `""` for "waiting" locations, a concept the core model should not know about.
+- `Location.toIMITATOR()` returns `""` for "waiting" locations, and `PTA.addLocation` must special-case them (A.1).
 
 Proposal: an `IncrementalPtaWriter` (or `OnlinePtaSink`) wrapping a `PTA` and a `Path`, with `writeHeader()`, `append(Location)`, `close()` (suffix). `PTA` becomes a pure data object; the include directive is emitted by the printer when the model is configured with `printer.includeExternally(pta, path)`.
 
-### 4.6 Naming and packaging
+### 4.5 Naming and packaging
 - The package `com.imitatorModel.imitatorModel` repeats itself. Suggested: `com.imitatormodel` (lowercase, per Java convention) with subpackages `expr`, `model`, `print`, `property`, `online`.
-- Java-style names: `isContinuousInitiallyZero` instead of `is_continuous_initially_0`; `ImiBoolean` → `BoolVar`; `Int` → `IntVar` (`Int` reads like a primitive wrapper); `getAction()` returning a `Set` → `getActions()`; `getTo()` → `getTargets()`; `setStop(Clock)` (adds) → `addStop(Clock)`.
-- `Transition` holding `Set<Action>` and `Set<Location>` destinations is a non-IMITATOR shortcut (it expands into the cross product when printed). Keep it as a builder convenience (`on(a, b).goTo(l)`) but store one action and one target per `Transition`, so the model matches the language.
+- Java-style names: `isContinuousInitiallyZero` instead of `is_continuous_initially_0`; `ImiBoolean` → `BoolVar`; `Int` → `IntVar`; `getAction()` returning a `Set` → `getActions()`; `getTo()` → `getTargets()`; `setStop(Clock)` (adds) → `addStop(Clock)` (the fluent `stop(Clock…)` exists now).
+- `Transition` holding `Set<Action>` and `Set<Location>` destinations is a non-IMITATOR shortcut (it expands into the cross product when printed). The builder already offers `on(a, b)`. Storing one action and one target per `Transition` would make the model match the language.
 
-### 4.7 `BigFraction`
-Fine as is, but consider:
-- `long`-based convenience constructors and `valueOf(String)` ("3/2", "0.25"), which would also help CherLog's numeric normalisation;
-- rejecting infinity in `toString()`, or giving it a separate type `ExtendedRational`, so infinity cannot leak into printed output (§1.5).
+### 4.6 `BigFraction`
+- `valueOf(String)` ("3/2", "0.25") would help CherLog's numeric normalisation.
+- Infinity can no longer reach printed output (A.1), but a separate `ExtendedRational` type would make that guarantee static.
 
 ---
 
 ## 5. Tests and tooling for the library itself
-- There are no unit tests. Add JUnit 5 golden tests: build a model → `toIMITATOR()` → compare with an expected `.imi`, and optionally run `imitator -mode checksyntax` when the binary is on `PATH` (skip otherwise). The bugs in §1.1, §1.2, §1.3, §1.5 and §1.6 are each a one-line test.
-- Add a round-trip smoke test for `toDNF()` (negation and disjunction splitting in guards).
-- Replace `Main.java` with an `examples/` package that builds the train/gate example from the IMITATOR manual using the new fluent API. It doubles as documentation.
-- Update `README.md`: it still says printing "was not much tested". Point it to the API (and to the Claude skill `imitator-java-api`).
+- Unit tests exist now (A.1). Possible additions: golden-file tests comparing a whole `.imi` against an expected file, and running IMITATOR on a property (not only `checksyntax`) when the binary is available.
+- Update `README.md`: it still says printing "was not much tested". Point it to the fluent API (`Main.trainGate()` is a complete example) and to the Claude skill `imitator-java-api`.
 
 ---
 
-## 6. Suggested migration order
-1. §1 bug fixes plus regression tests (no API change).
-2. §3.3 deterministic output (lets CherLog's test suite compare `.imi` files).
-3. §2 fluent additions next to the existing API; migrate one CherLog pattern (e.g. `DetectOccurrence`) as a pilot.
+## 6. Migration order
+1. ~~§1 bug fixes plus regression tests~~ (done, A.1).
+2. ~~§3.3 deterministic output~~ (done, A.2).
+3. ~~§2 fluent additions; migrate `DetectOccurrence` as a pilot~~ (done, A.3), ~~then all CherLog patterns~~ (done, A.5), ~~then the log automaton~~ (done, A.6).
 4. §3.1 `Property` builder; replace the `generateProperty()` strings.
 5. §3.2 `validate()`; enable it in CherLog's test run.
 6. §4 internal rewrite (sealed types, printer, online writer) behind the now-stable fluent façade, then remove the deprecated constructors.

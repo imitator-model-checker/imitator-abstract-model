@@ -1,7 +1,8 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -9,9 +10,15 @@ import java.util.stream.Collectors;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
-public final class LinearExpr implements UpdateTerm {
+/**
+ * Immutable linear expression {@code c1*v1 + ... + cn*vn + constant}.
+ * Terms are normalised on construction: like terms are merged and zero coefficients dropped,
+ * so {@code x + x} and {@code 2 * x} are equal.
+ */
+public final class LinearExpr implements UpdateTerm, Term {
 
-    private final List<Pair<VariableType, BigFraction>> terms;
+    // insertion-ordered, normalised (no zero coefficient), unmodifiable
+    private final Map<VariableType, BigFraction> coefficients;
     private final BigFraction constant;
 
     public static final LinearExpr ZERO = new LinearExpr(BigFraction.ZERO);
@@ -19,99 +26,126 @@ public final class LinearExpr implements UpdateTerm {
     public static final LinearExpr INFINITY = new LinearExpr(BigFraction.INFINITY);
     public static final LinearExpr MINUS_INFINITY = new LinearExpr(BigFraction.MINUS_INFINITY);
 
+    private LinearExpr(Map<VariableType, BigFraction> normalisedCoefficients, BigFraction constant, boolean alreadyNormalised) {
+        this.coefficients = Collections.unmodifiableMap(normalisedCoefficients);
+        this.constant = Objects.requireNonNull(constant);
+    }
+
     public LinearExpr(BigFraction constant) {
-        this.terms = new ArrayList<>();
-        this.constant = constant;
+        this(new LinkedHashMap<>(), constant, true);
     }
 
     public LinearExpr(VariableType v) {
-        this.terms = List.of(new Pair<>(v, BigFraction.ONE));
-        this.constant = BigFraction.ZERO;
+        this(v, BigFraction.ONE, BigFraction.ZERO);
     }
 
     public LinearExpr(VariableType v, BigFraction c) {
-        this.terms = List.of(new Pair<>(v, c));
-        this.constant = BigFraction.ZERO;
+        this(v, c, BigFraction.ZERO);
     }
 
     public LinearExpr(VariableType v, BigFraction c, BigFraction constant) {
-        this.terms = List.of(new Pair<>(v, c));
-        this.constant = constant;
+        this(List.of(new Pair<>(v, c)), constant);
     }
 
     public LinearExpr(List<? extends VariableType> variables,
                       List<BigFraction> coefficients,
                       BigFraction constant) {
+        this(zip(variables, coefficients), constant);
+    }
 
+    public LinearExpr(List<Pair<VariableType, BigFraction>> terms,
+                      BigFraction constant) {
+        this(normalise(terms), constant, true);
+    }
+
+    private static List<Pair<VariableType, BigFraction>> zip(List<? extends VariableType> variables,
+                                                             List<BigFraction> coefficients) {
         if (variables.size() != coefficients.size()) {
             throw new IllegalArgumentException(
                 "variables and coefficients must have the same size");
         }
 
-        List<Pair<VariableType, BigFraction>> temp = new ArrayList<>();
-
+        List<Pair<VariableType, BigFraction>> terms = new ArrayList<>();
         for (int i = 0; i < variables.size(); i++) {
-            temp.add(new Pair<>(variables.get(i), coefficients.get(i)));
+            terms.add(new Pair<>(variables.get(i), coefficients.get(i)));
         }
-
-        this.terms = List.copyOf(temp);
-        this.constant = constant;
-    }
-
-    public LinearExpr(List<Pair<VariableType, BigFraction>> terms,
-                      BigFraction constant) {
-        this.terms = List.copyOf(terms); // immutable copy
-        this.constant = constant;
-    }
-
-    public List<Pair<VariableType, BigFraction>> getTerms() {
         return terms;
+    }
+
+    // Merge like terms (same variable name) and drop zero coefficients
+    private static Map<VariableType, BigFraction> normalise(List<Pair<VariableType, BigFraction>> terms) {
+        Map<VariableType, BigFraction> merged = new LinkedHashMap<>();
+        for (Pair<VariableType, BigFraction> term : terms) {
+            merged.merge(Objects.requireNonNull(term.getFirst()), term.getSecond(), BigFraction::add);
+        }
+        merged.values().removeIf(c -> c.equals(BigFraction.ZERO));
+        return merged;
+    }
+
+    @Override
+    public LinearExpr expr() {
+        return this;
+    }
+
+    /** Terms as (variable, coefficient) pairs, in insertion order. Never contains a zero coefficient. */
+    public List<Pair<VariableType, BigFraction>> getTerms() {
+        return coefficients.entrySet().stream()
+                .map(e -> new Pair<>(e.getKey(), e.getValue()))
+                .toList();
+    }
+
+    public Map<VariableType, BigFraction> getCoefficients() {
+        return coefficients;
     }
 
     public BigFraction getConstant() {
         return constant;
     }
 
+    public boolean isConstant() {
+        return coefficients.isEmpty();
+    }
+
+    /** True if the constant is +inf: the whole expression is +inf whatever the variables. */
+    public boolean isPlusInfinity() {
+        return constant.isInfinite() && constant.signum() > 0;
+    }
+
+    /** True if the constant is -inf: the whole expression is -inf whatever the variables. */
+    public boolean isMinusInfinity() {
+        return constant.isInfinite() && constant.signum() < 0;
+    }
+
     public LinearExpr addTerm(VariableType variable, BigFraction coefficient) {
-        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
+        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(getTerms());
         newTerms.add(new Pair<>(variable, coefficient));
         return new LinearExpr(newTerms, constant);
     }
 
     public LinearExpr add(BigFraction constant){ 
-        return new LinearExpr(this.terms, this.constant.add(constant));
+        return new LinearExpr(new LinkedHashMap<>(coefficients), this.constant.add(constant), true);
     }
     
     public LinearExpr add(VariableType variable){ 
-        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
-        newTerms.add(new Pair<>(variable, BigFraction.ONE));
-        return new LinearExpr(newTerms, constant);
+        return addTerm(variable, BigFraction.ONE);
     }
 
-     public LinearExpr add(LinearExpr exp){ 
-        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(terms);
-        newTerms.addAll(exp.terms);
+    public LinearExpr add(LinearExpr exp){ 
+        List<Pair<VariableType, BigFraction>> newTerms = new ArrayList<>(getTerms());
+        newTerms.addAll(exp.getTerms());
         return new LinearExpr(newTerms, this.constant.add(exp.constant));
     }
-   
 
     public LinearExpr minus(LinearExpr exp) {
-        List<Pair<VariableType, BigFraction>> newTerms = terms.stream()
-            .map(p -> new Pair<>(
-                    p.getFirst(),
-                    p.getSecond()))
-            .collect(Collectors.toList());
+        return add(exp.times(BigFraction.ONE.negate()));
+    }
 
-        newTerms.addAll(
-            exp.terms.stream()
-                .map(p -> new Pair<>(
-                        p.getFirst(),
-                        p.getSecond().negate()))
-                .collect(Collectors.toList()));
-
-        return new LinearExpr(
-            newTerms,
-            this.constant.add(exp.constant.negate()));
+    @Override
+    public LinearExpr times(BigFraction k) {
+        List<Pair<VariableType, BigFraction>> newTerms = getTerms().stream()
+                .map(p -> new Pair<>(p.getFirst(), p.getSecond().multiply(k)))
+                .collect(Collectors.toList());
+        return new LinearExpr(newTerms, constant.multiply(k));
     }
 
     @Override
@@ -124,62 +158,44 @@ public final class LinearExpr implements UpdateTerm {
             return false;
         }
 
-        return Objects.equals(constant, other.constant)
-                && termCounts(terms).equals(termCounts(other.terms));
+        return constant.equals(other.constant)
+                && coefficients.equals(other.coefficients);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(
-                constant,
-                termCounts(terms)
-        );
-    }
-
-    private static <T> Map<T, Integer> termCounts(List<T> terms) {
-        Map<T, Integer> counts = new HashMap<>();
-
-        for (T term : terms) {
-            counts.merge(term, 1, Integer::sum);
-        }
-
-        return counts;
+        return Objects.hash(constant, coefficients);
     }
 
     // Method to format the linear term as specified
     public String toIMITATOR() {
-        StringBuilder sb = new StringBuilder();
+        if (constant.isInfinite()) {
+            throw new IllegalStateException(
+                "Infinite expression cannot be printed in IMITATOR: " + this);
+        }
+        return format();
+    }
 
-        // Append each term in the form coef * variable
-        for (int i = 0; i < terms.size(); i++) {
-            Pair<VariableType, BigFraction> term = terms.get(i);
-            BigFraction coefficient = term.getSecond();
-            String variableName = term.getFirst().getName();
+    private String format() {
+        List<String> parts = new ArrayList<>();
 
-            // Append coefficient and variable name
-            if(coefficient.equals(BigFraction.ZERO)){
-                // Add nothing
-            }else if (coefficient.equals(BigFraction.ONE)){
-                sb.append(variableName);
-            }else {
-                sb.append(coefficient).append(" * ").append(variableName);
-            }
-
-            // Add " + " if not the last term
-            // WARNING: will create an issue if only 0-terms before
-            if (i < terms.size() - 1) {
-                sb.append(" + ");
-            }
+        for (Map.Entry<VariableType, BigFraction> term : coefficients.entrySet()) {
+            String variableName = term.getKey().getName();
+            BigFraction coefficient = term.getValue();
+            parts.add(coefficient.equals(BigFraction.ONE)
+                    ? variableName
+                    : coefficient + " * " + variableName);
         }
 
-        // Add constant term with correct formatting
-        if (!constant.equals(BigFraction.ZERO) || terms.isEmpty()) {
-            if (sb.length() > 0) {
-                sb.append(" + ");
-            }
-            sb.append(constant);
+        if (!constant.equals(BigFraction.ZERO) || parts.isEmpty()) {
+            parts.add(constant.toString());
         }
 
-        return sb.toString();
+        return String.join(" + ", parts);
+    }
+
+    @Override
+    public String toString() {
+        return format();
     }
 }

@@ -1,8 +1,12 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class Location {
     private String name;
@@ -13,6 +17,9 @@ public class Location {
     private Boolean isAccepting;
     private List<Clock> stop ;
     private Boolean isWaiting ; //for online log only
+
+    private PTA owner;                                            // set by PTA.addLocation
+    private final Set<Action> actionsToDeclare = new LinkedHashSet<>(); // used by the builder before the location has an owner
 
     public Location(String name, ComplexConstraint invariant, List<Pair<VariableType, LinearExpr>> rate, Boolean isUrgent, Boolean isWaiting, Boolean isAccepting) {
         this.name = name;
@@ -81,9 +88,8 @@ public class Location {
         transitions.add(transition);
     }
 
-    public void addTransitions(List<Transition> transition) {
-
-        transitions.addAll(transitions);
+    public void addTransitions(List<Transition> transitions) {
+        this.transitions.addAll(transitions);
     }
 
     public void addRate(VariableType variable, LinearExpr linearTerm) {
@@ -98,13 +104,93 @@ public class Location {
         return isAccepting;
     }
 
+    // ---------------------------------------------------------------
+    // Fluent builder methods (return this)
+    // ---------------------------------------------------------------
+
+    public Location invariant(ComplexConstraint invariant) {
+        setInvariant(invariant);
+        return this;
+    }
+
+    public Location invariant(Constraint invariant) {
+        return invariant(new ConstraintNode(invariant));
+    }
+
+    public Location urgent() {
+        setUrgent(true);
+        return this;
+    }
+
+    public Location accepting() {
+        setAccepting(true);
+        return this;
+    }
+
+    public Location stop(Clock... clocks) {
+        stop.addAll(Arrays.asList(clocks));
+        return this;
+    }
+
+    public Location flow(Clock clock, Term rate) {
+        addRate(clock, rate.expr());
+        return this;
+    }
+
+    /** Start a transition synchronized on {@code actions} (one IMITATOR transition per action). */
+    public TransitionBuilder on(Action... actions) {
+        if (actions.length == 0) {
+            throw new IllegalArgumentException("on(...) needs at least one action; use silent() for an unsynchronized transition");
+        }
+        return new TransitionBuilder(this, Arrays.asList(actions));
+    }
+
+    /** Start an unsynchronized (epsilon) transition. */
+    public TransitionBuilder silent() {
+        return new TransitionBuilder(this, List.of());
+    }
+
+    /**
+     * Start a transition synchronized on each action of {@code actions} (one IMITATOR transition per action).
+     * An empty collection gives an unsynchronized transition, like {@code new Transition} with no action.
+     */
+    public TransitionBuilder on(Collection<Action> actions) {
+        return new TransitionBuilder(this, List.copyOf(actions));
+    }
+
+    // Declare actions used by a builder transition on the owning PTA (now or when the location is added)
+    void declareActions(Iterable<Action> actions) {
+        for (Action action : actions) {
+            if (owner == null) {
+                actionsToDeclare.add(action);
+            } else if (owner.isAutoDeclareActions()) {
+                owner.addAction(action);
+            }
+        }
+    }
+
+    void setOwner(PTA owner) {
+        this.owner = owner;
+        if (owner.isAutoDeclareActions()) {
+            actionsToDeclare.forEach(owner::addAction);
+        }
+        actionsToDeclare.clear();
+    }
+
+    public PTA getOwner() {
+        return owner;
+    }
+
 	public String nameToIMITATOR(){
 		return name;
 	}
 
     
-    public boolean equals(Location o) {
-        return this.name.equals(o.name);
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Location other)) return false;
+        return this.name.equals(other.name);
     }
 
     @Override

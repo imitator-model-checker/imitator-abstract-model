@@ -5,36 +5,68 @@
 package com.imitatorModel.imitatorModel;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class ImitatorModel {
-    private Set<VariableType> variables;
-    private List<PTA> ptas;
+    private final Map<String, VariableType> variables;   // keyed by name, declaration order = insertion order
+    private final List<PTA> ptas;
+    private boolean headerTimestamp = true;
 
     public ImitatorModel() {
-        this.variables = new HashSet<VariableType>();
+        this.variables = new LinkedHashMap<>();
         this.ptas = new ArrayList<PTA>();
     }
 
-    public void addVariable(VariableType variable) {
-        this.variables.add(variable);
+    /**
+     * Declare a variable. If a variable with the same name and type is already declared, it is kept
+     * and returned (the argument is ignored). If the name is used with another type, throws.
+     * @return the variable now declared under that name
+     */
+    public VariableType addVariable(VariableType variable) {
+        VariableType existing = variables.get(variable.getName());
+        if (existing == null) {
+            variables.put(variable.getName(), variable);
+            return variable;
+        }
+        if (existing.getClass() != variable.getClass()) {
+            throw new IllegalArgumentException(
+                "Variable " + variable.getName() + " is already declared as "
+                + existing.getIMITATORType() + ", cannot redeclare it as " + variable.getIMITATORType());
+        }
+        return existing;
     }
 
-    public void addVariableOverwrite(VariableType variable) {
-        variables.removeIf(v ->
-            v.getName().equals(variable.getName())
-                && !v.getIMITATORType().equals(variable.getIMITATORType())
-        );
-        variables.add(variable);
+    /** Declare a variable, replacing any variable with the same name (whatever its type). */
+    public VariableType replaceVariable(VariableType variable) {
+        variables.put(variable.getName(), variable);
+        return variable;
     }
 
-    public void addVariables(Set<VariableType> variables) {
-        this.variables.addAll(variables);
+    /**
+     * Replace a same-name variable only if its type differs; a same-type variable is kept.
+     * Used by {@link #mergeModel}. For an unconditional overwrite use {@link #replaceVariable}.
+     * @return the variable now declared under that name
+     */
+    public VariableType addVariableOverwrite(VariableType variable) {
+        VariableType existing = variables.get(variable.getName());
+        if (existing != null && existing.getIMITATORType().equals(variable.getIMITATORType())) {
+            return existing;
+        }
+        variables.put(variable.getName(), variable);
+        return variable;
+    }
+
+    public void addVariables(Collection<? extends VariableType> variables) {
+        variables.forEach(this::addVariable);
     }
 
     public void addPTA(PTA pta) {
@@ -45,8 +77,19 @@ public class ImitatorModel {
         this.ptas.addAll(ptas);
     }
 
+    /** Create an automaton, add it to the model and return it. */
+    public PTA automaton(String name) {
+        if (ptas.stream().anyMatch(p -> p.getName().equals(name))) {
+            throw new IllegalArgumentException("Automaton " + name + " already exists");
+        }
+        PTA pta = new PTA(name);
+        addPTA(pta);
+        return pta;
+    }
+
+    /** Variables in declaration order (read-only snapshot). */
     public Set<VariableType> getVariables() {
-        return variables;
+        return Collections.unmodifiableSet(new LinkedHashSet<>(variables.values()));
     }
 
     public List<PTA> getPTAs() {
@@ -61,53 +104,52 @@ public class ImitatorModel {
                         new IllegalArgumentException("Unknown PTA: " + name));
     }
 
-    // addVariable from name
+    /** Whether the generated header contains the generation date (true by default). Disable for reproducible output. */
+    public ImitatorModel setHeaderTimestamp(boolean headerTimestamp) {
+        this.headerTimestamp = headerTimestamp;
+        return this;
+    }
+
+    // addVariable from name: return the declared variable (existing one if same name and type)
     public Clock addClock(String name) {
-        Clock clock = new Clock(name);
-        this.addVariable(clock);
-        return clock;
+        return (Clock) addVariable(new Clock(name));
     }
 
     public Parameter addParameter(String name) {
-        Parameter parameter = new Parameter(name);
-        this.addVariable(parameter);
-        return parameter;
+        return (Parameter) addVariable(new Parameter(name));
     }
 
     public Rational addRational(String name) {
-        Rational rational = new Rational(name);
-        this.addVariable(rational);
-        return rational;
+        return (Rational) addVariable(new Rational(name));
     }
 
     public Rational addRationalOverwrite(String name) {
-        Rational rational = new Rational(name);
-        this.addVariableOverwrite(rational);
-        return rational;
+        return (Rational) addVariableOverwrite(new Rational(name));
     }
 
     public Int addInt(String name) {
-        Int integer = new Int(name);
-        this.addVariable(integer);
-        return integer;
+        return (Int) addVariable(new Int(name));
     }
 
     public ImiBoolean addImiBoolean(String name) {
-        ImiBoolean bool = new ImiBoolean(name);
-        this.addVariable(bool);
-        return bool;
+        return (ImiBoolean) addVariable(new ImiBoolean(name));
     }
 
+    /**
+     * Variables of this model, then those of {@code other}: a Rational of {@code other} replaces a
+     * same-name variable of another type; any other same-name variable of {@code other} is ignored.
+     * PTAs of this model come first.
+     */
     public ImitatorModel mergeModel(ImitatorModel other) {
         ImitatorModel result = new ImitatorModel();
+        result.headerTimestamp = this.headerTimestamp;
 
-        result.addVariables(this.variables);
-        // result.addVariables(other.variables);
-        for (VariableType variable : other.variables) {
+        result.addVariables(this.variables.values());
+        for (VariableType variable : other.variables.values()) {
             if (variable instanceof Rational) {
                 result.addVariableOverwrite(variable);
             } else {
-                result.addVariable(variable);
+                result.variables.putIfAbsent(variable.getName(), variable);
             }
         }
 
@@ -148,7 +190,9 @@ public class ImitatorModel {
 
         // Header
         sb.append("(************************************************************\n");
-        sb.append(" * Model automatically generated (" + formattedDateTime + ")\n");
+        sb.append(headerTimestamp
+                ? " * Model automatically generated (" + formattedDateTime + ")\n"
+                : " * Model automatically generated\n");
         sb.append("************************************************************)\n");
 
         return sb.toString();
@@ -158,13 +202,12 @@ public class ImitatorModel {
         StringBuilder sb = new StringBuilder();
 		// Variables declaration
 		sb.append("var");
-        for (VariableType variable : variables) {  
-            // Adding a newline after each location for readability
+        for (VariableType variable : variables.values()) {
             sb.append("\n\t")
             .append(variable.toIMITATOR());
 
-            if (variable.getValue() != null) {
-                sb.append(" = ").append(variable.getValue());
+            if (variable.valueToIMITATOR() != null) {
+                sb.append(" = ").append(variable.valueToIMITATOR());
             }
 
             sb.append(": ").append(variable.getIMITATORType()).append(";");        
@@ -187,6 +230,9 @@ public class ImitatorModel {
         sb.append("\t(* Initial location *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
         for (PTA pta : ptas) {
+            if (pta.getInitialLocation() == null) {
+                throw new IllegalStateException("Automaton " + pta.getName() + " has no initial location");
+            }
             sb.append("\tloc[" + pta.getName() + "] <- " + pta.getInitialLocation().nameToIMITATOR() + ",\n");
         }
         sb.append("\n");
@@ -195,7 +241,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Initial discrete variables assignments *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
-        for (VariableType v : variables) {
+        for (VariableType v : variables.values()) {
             if(v.is_discrete_initially_0()) {
                 if (v instanceof ImiBoolean){
                     sb.append("\t " + v.toIMITATOR() + " <- False,\n");
@@ -211,7 +257,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Initial clock constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
-        for (VariableType v : variables) {
+        for (VariableType v : variables.values()) {
             if(v instanceof Clock  && v.is_continuous_initially_0()) {
                 sb.append("\t & " + v.toIMITATOR() + " = 0\n");
             }
@@ -220,7 +266,7 @@ public class ImitatorModel {
         sb.append("\t(*------------------------------------------------------------*)\n");
         sb.append("\t(* Parameter constraints *)\n");
         sb.append("\t(*------------------------------------------------------------*)\n");
-        for (VariableType v : variables) {
+        for (VariableType v : variables.values()) {
             if(v instanceof Parameter p && p.geConstraint() != null) {
                 sb.append("\t & " + p.geConstraint().toIMITATOR() + "\n");
             }

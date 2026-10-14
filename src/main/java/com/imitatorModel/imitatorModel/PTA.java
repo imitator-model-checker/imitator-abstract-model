@@ -5,19 +5,23 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayDeque;
-// import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 import java.nio.file.Paths;
 
 
 public class PTA {
-    private Set<Location> locations;
-    private Set<Action> actions;
+    private final Map<String, Location> locations;   // keyed by location name, insertion order
+    private final Set<Action> actions;
     private String name;
     private Location initial_location;
 
@@ -26,18 +30,29 @@ public class PTA {
 
     private String separateFileName = null;
 
+    // When true, transitions built with Location.on(...).goTo(...) declare their actions on this PTA
+    private boolean autoDeclareActions = true;
+
     public PTA(String name) {
 		this.name = name;
-        this.locations = new LinkedHashSet<>();
-        this.actions = new HashSet<>();
+        this.locations = new LinkedHashMap<>();
+        this.actions = new LinkedHashSet<>();
     }
 
     public void setSeparateFileName (String filename){
         separateFileName = filename;
     }
 
-    public boolean equals(PTA other){
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PTA other)) return false;
         return this.name.equals(other.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
     }
 
     public Location getInitialLocation(){
@@ -65,11 +80,18 @@ public class PTA {
     }
     // Manipulating location list //////////////////////////////
 
+    /**
+     * Add a location. Its name must be new in this PTA, except that a waiting placeholder
+     * (online mode) is replaced by a location of the same name.
+     */
     public void addLocation(Location location) {
-        if (!locations.add(location)) {
-            throw new IllegalArgumentException("Location already exists");
+        Location existing = locations.get(location.getName());
+        if (existing != null && (existing == location || !existing.getIsWaiting())) {
+            throw new IllegalArgumentException(
+                "Location " + location.getName() + " already exists in automaton " + name);
         }
-        locations.add(location);
+        locations.put(location.getName(), location);
+        location.setOwner(this);
     }
 
     // ignore adding waiting location... 
@@ -82,14 +104,56 @@ public class PTA {
 
     ///// getter for locations
     public Set<Location> getLocations() {
-        return locations;
+        return Collections.unmodifiableSet(new LinkedHashSet<>(locations.values()));
     }
 
     public Location getLocation(String name) {
-        return locations.stream()
-                .filter(location -> location.getName().equals(name))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Location not found: " + name));
+        Location location = locations.get(name);
+        if (location == null) {
+            throw new IllegalArgumentException("Location not found: " + name);
+        }
+        return location;
+    }
+
+    public boolean hasLocation(String name) {
+        return locations.containsKey(name);
+    }
+
+    // Fluent builder methods ///////////////////////////////////
+
+    /** The location called {@code name}, created and added if it does not exist yet. */
+    public Location loc(String name) {
+        Location location = locations.get(name);
+        if (location == null) {
+            location = new Location(name);
+            addLocation(location);
+        }
+        return location;
+    }
+
+    public PTA initial(Location location) {
+        setInitialLocation(location);
+        return this;
+    }
+
+    /**
+     * Whether builder transitions ({@code loc.on(a).goTo(l)}) declare their actions on this PTA (default true).
+     * Disable it when the declared actions must be exactly a given set, e.g. a monitor that mirrors the
+     * events of a log: a sync on an event the log does not have must stay undeclared rather than become
+     * an action the monitor can take on its own.
+     */
+    public PTA setAutoDeclareActions(boolean autoDeclareActions) {
+        this.autoDeclareActions = autoDeclareActions;
+        return this;
+    }
+
+    public boolean isAutoDeclareActions() {
+        return autoDeclareActions;
+    }
+
+    public PTA actions(Action... actions) {
+        this.actions.addAll(Arrays.asList(actions));
+        return this;
     }
 
 
@@ -120,7 +184,7 @@ public class PTA {
     public String generateLocations(){
             StringBuilder sb = new StringBuilder();
             // List of locations
-            for (Location location : locations) {
+            for (Location location : locations.values()) {
                 sb.append(location.toIMITATOR()).append("\n\n");  // Adding a newline after each location for readability
             }
             return sb.toString();
@@ -132,10 +196,12 @@ public class PTA {
         sb.append("automaton " + name + "\n");
         sb.append("(*------------------------------------------------------------*)\n");
         // List of Actions
+        // Sorted by name so that the output does not depend on the order actions were added
         sb.append("actions: ");
-        for (Action action : actions) {
-            sb.append(action.toIMITATOR()).append(", ");  // Adding a newline after each location for readability
-        }
+        sb.append(actions.stream()
+                .map(Action::toIMITATOR)
+                .sorted()
+                .collect(Collectors.joining(", ")));
         sb.append(";\n");
         return sb.toString(); 
     }

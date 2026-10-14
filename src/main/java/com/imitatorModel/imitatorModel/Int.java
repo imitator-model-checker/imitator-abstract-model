@@ -1,6 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
-public class Int extends VariableType {
+public class Int extends NumericVariable {
     private Integer value;
 
     public Int(String name) {

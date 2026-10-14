@@ -51,80 +51,41 @@ public final class Constraint {
         else if (allPositiveClocksRight && operator == Operator.GT && leftTerm.equals(LinearExpr.ZERO)) {
                 this.truthConst = false;
            }
-        // Infinity vs infinity
-        else if (leftTerm.equals(LinearExpr.INFINITY)
-                && rightTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = switch (operator) {
-                case EQ, LE, GE -> true;
-                case LT, GT -> false;  //, NE 
-            };
-        }
-        else if (leftTerm.equals(LinearExpr.MINUS_INFINITY)
-                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = switch (operator) {
-                case EQ, LE, GE -> true;
-                case LT, GT -> false;  //, NE
-            };
-        }
-        else if (leftTerm.equals(LinearExpr.INFINITY)
-                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = switch (operator) {
-                case GT, GE -> true;  //, NE
-                case LT, LE, EQ -> false;
-            };
-        }
-        else if (leftTerm.equals(LinearExpr.MINUS_INFINITY)
-                && rightTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = switch (operator) {
-                case LT, LE -> true;   //, NE
-                case GT, GE, EQ -> false;
-            };
-        }
-        /////////////////
-        else if ((operator == Operator.LT || operator == Operator.LE)
-                && rightTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = true;
-        }
-
-        else if ((operator == Operator.GT || operator == Operator.GE
-                || operator == Operator.EQ)
-                && rightTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = false;
-        }
-
-        else if ((operator == Operator.LT || operator == Operator.LE
-                || operator == Operator.EQ)
-                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = false;
-        }
-        else if ((operator == Operator.GT || operator == Operator.GE)
-                && rightTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = true;
-        }
-
-        else if ((operator == Operator.LT || operator == Operator.LE
-                || operator == Operator.EQ)
-                && leftTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = false;
-        }
-        else if ((operator == Operator.GT || operator == Operator.GE)
-                && leftTerm.equals(LinearExpr.INFINITY)) {
-            this.truthConst = true;
-        }
-
-        else if ((operator == Operator.LT || operator == Operator.LE)
-                && leftTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = true;
-        }
-        else if ((operator == Operator.GT || operator == Operator.GE
-                || operator == Operator.EQ)
-                && leftTerm.equals(LinearExpr.MINUS_INFINITY)) {
-            this.truthConst = false;
+        // A side whose constant is +-inf is +-inf whatever its variables
+        else if (leftTerm.isPlusInfinity() || leftTerm.isMinusInfinity()
+                || rightTerm.isPlusInfinity() || rightTerm.isMinusInfinity()) {
+            this.truthConst = compareWithInfinity(leftTerm, operator, rightTerm);
         }
 
         else {
             this.truthConst = truthConst;
         }
+    }
+
+    // Truth value of "left op right" when at least one side is infinite
+    private static boolean compareWithInfinity(LinearExpr left, Operator operator, LinearExpr right) {
+        int l = infinitySign(left);
+        int r = infinitySign(right);
+
+        // Both sides infinite: compare the signs. One side infinite: the finite side counts as 0.
+        int cmp = Integer.compare(l, r);
+        if (l != 0 && l == r) {
+            cmp = 0;
+        }
+
+        return switch (operator) {
+            case LT -> cmp < 0;
+            case LE -> cmp <= 0;
+            case EQ -> cmp == 0 && l != 0;
+            case GE -> cmp >= 0;
+            case GT -> cmp > 0;
+        };
+    }
+
+    private static int infinitySign(LinearExpr e) {
+        if (e.isPlusInfinity()) return 1;
+        if (e.isMinusInfinity()) return -1;
+        return 0;
     }
 
     public Constraint(LinearExpr leftTerm, Operator operator, LinearExpr rightTerm) {
@@ -174,14 +135,31 @@ public final class Constraint {
             return new Constraint(booleanTerm.negate());
         }
 
-        Boolean negatedTruthConst =
-                (truthConst == null) ? null : !truthConst;
+        if (truthConst != null) {
+            return truthConst ? FALSE : TRUE;
+        }
+
+        if (operator == Operator.EQ) {
+            throw new IllegalStateException(
+                "The negation of " + toIMITATOR() + " is a disjunction; use ConstraintNode.negate()");
+        }
 
         return new Constraint(
                 leftTerm,
                 operator.getInverse(),
-                rightTerm,
-                negatedTruthConst);
+                rightTerm);
+    }
+
+    public BooleanExpr getBooleanTerm() {
+        return booleanTerm;
+    }
+
+    public boolean isTrue() {
+        return Boolean.TRUE.equals(truthConst);
+    }
+
+    public boolean isFalse() {
+        return Boolean.FALSE.equals(truthConst);
     }
 
 	public String toIMITATOR(){

@@ -4,16 +4,31 @@ import java.util.List;
 
 import com.imitatorModel.bigFraction.BigFraction;
 
+/**
+ * Assignment {@code variable := term}, optionally conditional ({@code if condition then ... end}).
+ * Prefer the fluent forms: {@code x.reset()}, {@code i.assign(i.plus(1))}, {@code b.assign(true)},
+ * {@code u.when(cond)}.
+ */
 public final class Update {
 
-    private ComplexConstraint condition;        // allows to have conditional updates, e.g., if (x > 0) then x := x + 1 else x := x - 1
-    private VariableType variable;
-    private UpdateTerm term;
+    private final ComplexConstraint condition;        // allows to have conditional updates, e.g., if (x > 0) then x := x + 1 else x := x - 1
+    private final VariableType variable;
+    private final UpdateTerm term;
 
-    public Update(VariableType variable, LinearExpr term) {
-        validateTerm(variable, term);
+    /**
+     * Canonical constructor. {@code condition} may be null and must only use discrete variables;
+     * a boolean target needs a {@link BooleanExpr}, any other target a {@link LinearExpr}.
+     */
+    public Update(ComplexConstraint condition, VariableType variable, UpdateTerm term) {
+        validateTarget(variable, term);
+        validateCondition(condition);
+        this.condition = condition;
         this.variable = variable;
         this.term = term;
+    }
+
+    public Update(VariableType variable, LinearExpr term) {
+        this((ComplexConstraint) null, variable, term);
     }
 
     public Update(ImiBoolean variable, Boolean term) {
@@ -25,21 +40,15 @@ public final class Update {
     }
 
     public Update(ImiBoolean variable, BooleanExpr term) {
-        this.variable = variable;
-        this.term = term;
+        this((ComplexConstraint) null, variable, term);
     }
 
     public Update(VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
-        validateLinearVariable(variable);
-        this.variable = variable;
-        this.term = new LinearExpr(variables, coefficients, constant);
+        this(variable, new LinearExpr(variables, coefficients, constant));
     }
 
     public Update(ComplexConstraint condition, VariableType variable, LinearExpr term) {
-        validateTerm(variable, term);
-        this.condition = condition;
-        this.variable = variable;
-        this.term = term;
+        this(condition, variable, (UpdateTerm) term);
     }
 
     public Update(ComplexConstraint condition, ImiBoolean variable, Boolean term) {
@@ -51,23 +60,15 @@ public final class Update {
     }
 
     public Update(ComplexConstraint condition, ImiBoolean variable, BooleanExpr term) {
-        this.condition = condition;
-        this.variable = variable;
-        this.term = term;
+        this(condition, variable, (UpdateTerm) term);
     }
 
     public Update(ComplexConstraint condition, VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
-        validateLinearVariable(variable);
-        this.condition = condition;
-        this.variable = variable;
-        this.term = new LinearExpr(variables, coefficients, constant);
+        this(condition, variable, new LinearExpr(variables, coefficients, constant));
     }
 
     public Update(Constraint condition, VariableType variable, LinearExpr term) {
-        validateTerm(variable, term);
-        this.condition = new ConstraintNode(condition);
-        this.variable = variable;
-        this.term = term;
+        this(new ConstraintNode(condition), variable, term);
     }
 
     public Update(Constraint condition, ImiBoolean variable, Boolean term) {
@@ -79,34 +80,20 @@ public final class Update {
     }
 
     public Update(Constraint condition, ImiBoolean variable, BooleanExpr term) {
-        this.condition = new ConstraintNode(condition);
-        this.variable = variable;
-        this.term = term;
+        this(new ConstraintNode(condition), variable, term);
     }
 
     public Update(Constraint condition, VariableType variable, List<VariableType> variables, List<BigFraction> coefficients, BigFraction constant) {
-        validateLinearVariable(variable);
-        this.condition = new ConstraintNode(condition);
-        this.variable = variable;
-        this.term = new LinearExpr(variables, coefficients, constant);
+        this(new ConstraintNode(condition), variable, variables, coefficients, constant);
     }
 
-    public Update(LinearExpr term1, LinearExpr term2) {
-        // take the first variable as the first one to be seen in the Linear expression 1
-        this.variable = term1.getTerms().get(0).getFirst();
-        this.term = term2;
+    /** Same update, executed only if {@code cond} holds (AND-ed with an existing condition). */
+    public Update when(ComplexConstraint cond) {
+        return new Update(condition == null ? cond : condition.and(cond), variable, term);
     }
 
-    public Update(ComplexConstraint condition, LinearExpr term1, LinearExpr term2) {
-        this.condition = condition;
-        this.variable = term1.getTerms().get(0).getFirst();
-        this.term = term2;
-    }
-
-    public Update(Constraint condition, LinearExpr term1, LinearExpr term2) {
-        this.condition = new ConstraintNode(condition);
-        this.variable = term1.getTerms().get(0).getFirst();
-        this.term = term2;
+    public Update when(Constraint cond) {
+        return when(new ConstraintNode(cond));
     }
 
     public VariableType getVariable() {
@@ -115,6 +102,10 @@ public final class Update {
 
     public UpdateTerm getTerm() {
         return term;
+    }
+
+    public ComplexConstraint getCondition() {
+        return condition;
     }
 
     public String toIMITATOR() {
@@ -130,16 +121,33 @@ public final class Update {
         return term.toIMITATOR();
     }
 
-    private static void validateTerm(VariableType variable, LinearExpr term) {
-        if (variable instanceof ImiBoolean) {
+    private static void validateTarget(VariableType variable, UpdateTerm term) {
+        if (variable == null || term == null) {
+            throw new IllegalArgumentException("Update needs a target variable and a value");
+        }
+        if (variable instanceof Parameter) {
+            throw new IllegalArgumentException("Parameter " + variable.getName() + " cannot be updated");
+        }
+        if (variable instanceof ImiBoolean && !(term instanceof BooleanExpr)) {
             throw new IllegalArgumentException("Boolean updates require a BooleanExpr term");
+        }
+        if (!(variable instanceof ImiBoolean) && term instanceof BooleanExpr) {
+            throw new IllegalArgumentException(
+                "Variable " + variable.getName() + " is not boolean and cannot receive a BooleanExpr");
         }
     }
 
-    private static void validateLinearVariable(VariableType variable) {
-        if (variable instanceof ImiBoolean) {
-            throw new IllegalArgumentException("Boolean updates require a BooleanExpr term");
+    // IMITATOR only accepts discrete variables in the condition of an "if" update
+    private static void validateCondition(ComplexConstraint condition) {
+        if (condition == null) {
+            return;
+        }
+        for (VariableType v : condition.getVariables()) {
+            if (v instanceof Clock || v instanceof Parameter) {
+                throw new IllegalArgumentException(
+                    "Update condition may only use discrete variables, found "
+                    + v.getIMITATORType() + " " + v.getName());
+            }
         }
     }
-
 }

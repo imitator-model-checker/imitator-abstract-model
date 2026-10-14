@@ -11,6 +11,9 @@ public class ConstraintNode extends ComplexConstraint {
 
     @Override
     public ComplexConstraint negate() {
+        if (constraint.getTruthConst() != null) {
+            return new ConstraintNode(constraint.isTrue() ? Constraint.FALSE : Constraint.TRUE);
+        }
         if (constraint.getOperator() == Operator.EQ){
             return OrNode.fromConstraints(List.of(
                     new Constraint(constraint.getLeftTerm(), Operator.LT, constraint.getRightTerm()),
