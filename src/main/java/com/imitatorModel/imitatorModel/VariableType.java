@@ -61,6 +61,23 @@ public abstract class VariableType{
 		return getName();
 	}
 
+    /** UPPAAL name of the variable (renamed if it clashes with an UPPAAL keyword or another global). */
+    public String toUppaal(UppaalContext ctx){
+        return ctx.variableName(this);
+    }
+
+    /** UPPAAL type of the variable, or null when UPPAAL has no counterpart (a problem is then recorded). */
+    public String getUppaalType(UppaalContext ctx) {
+        ctx.problem(getIMITATORType() + " " + getName() + " has no UPPAAL counterpart");
+        return null;
+    }
+
+    /** UPPAAL declaration, e.g. {@code clock x;}, {@code int[-100000000,100000000] r = 0;}, {@code const int N = 3;} */
+    public String declarationToUppaal(UppaalContext ctx) {
+        String type = getUppaalType(ctx);
+        return type == null ? "// " + getName() + " : " + getIMITATORType() : type + " " + toUppaal(ctx) + ";";
+    }
+
     @Override
     public String toString() {
         return getName();

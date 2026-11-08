@@ -34,6 +34,11 @@ public class ListUpdates {
         return new ListUpdates(newUpdates);
     }
 
+    /** UPPAAL assignment label: the updates separated by commas (UPPAAL also runs them in order); "" if none. */
+    public String toUppaal(UppaalContext ctx) {
+        return String.join(", ", updates.stream().map(u -> u.toUppaal(ctx)).toList());
+    }
+
     public String toIMITATOR() {
         if(updates.isEmpty()){
             return "";

@@ -11,6 +11,11 @@ public class Clock extends NumericVariable {
 
     public boolean is_continuous_initially_0(){return true;}
 
+    @Override
+    public String getUppaalType(UppaalContext ctx) {
+        return "clock";
+    }
+
     /** {@code this := 0} */
     public Update reset() {
         return assign(0);

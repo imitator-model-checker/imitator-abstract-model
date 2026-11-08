@@ -126,6 +126,24 @@ public final class Update {
         }
     }
 
+    /**
+     * UPPAAL statement: {@code x = 0}, {@code r = r + 3}, {@code imi__rqueue_push(q, t)}. A conditional update
+     * becomes a call to a generated function {@code imi__cond_N()} holding {@code if (cond) { ... }}
+     * (UPPAAL assignments are expressions, and a clock cannot appear in {@code c ? e : x}).
+     */
+    public String toUppaal(UppaalContext ctx) {
+        String statement;
+        if (term instanceof QueueExpr q && q.isUppaalStatement()) {
+            statement = q.toUppaal(ctx, variable);
+        } else {
+            statement = variable.toUppaal(ctx) + " = " + term.toUppaal(ctx, variable);
+        }
+        if (condition != null) {
+            return ctx.conditionalHelper(condition.toUppaal(ctx), statement);
+        }
+        return statement;
+    }
+
     private String termToIMITATOR() {
         return term.toIMITATOR();
     }

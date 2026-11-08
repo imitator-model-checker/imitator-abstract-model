@@ -37,6 +37,19 @@ public final class BooleanExpr implements UpdateTerm {
         return negated ? "not (" + expression + ")" : expression;
     }
 
+    /** {@code true}, {@code b}, {@code !b} */
+    public String toUppaal(UppaalContext ctx) {
+        if (value != null) {
+            return (value ^ negated) ? "true" : "false";
+        }
+        return (negated ? "!" : "") + variable.toUppaal(ctx);
+    }
+
+    @Override
+    public String toUppaal(UppaalContext ctx, VariableType target) {
+        return toUppaal(ctx);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {

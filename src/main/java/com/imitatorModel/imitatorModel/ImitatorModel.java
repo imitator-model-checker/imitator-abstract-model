@@ -278,6 +278,211 @@ public class ImitatorModel {
         return sb.toString();  // Remove the last newline
     }
 
+    // ------------------------------------------------------------------
+    // Parameters and choice of the model checker
+    // ------------------------------------------------------------------
+
+    /** Variables read or written anywhere in the automata: invariants, flows, guards, updates (and their conditions). */
+    public Set<VariableType> getUsedVariables() {
+        Set<VariableType> used = new LinkedHashSet<>();
+        for (PTA pta : ptas) {
+            for (Location l : pta.getLocations()) {
+                used.addAll(l.getInvariant().getVariables());
+                used.addAll(l.getStop());
+                for (Pair<VariableType, LinearExpr> r : l.getRate()) {
+                    used.add(r.getFirst());
+                    used.addAll(r.getSecond().getCoefficients().keySet());
+                }
+                for (Transition t : l.getTransitions()) {
+                    used.addAll(t.getGuard().getVariables());
+                    for (Update u : t.getUpdates().getUpdates()) {
+                        used.add(u.getVariable());
+                        if (u.getCondition() != null) {
+                            used.addAll(u.getCondition().getVariables());
+                        }
+                        collectTermVariables(u.getTerm(), used);
+                    }
+                }
+            }
+        }
+        return used;
+    }
+
+    private static void collectTermVariables(UpdateTerm term, Set<VariableType> used) {
+        if (term instanceof LinearExpr e) {
+            used.addAll(e.getCoefficients().keySet());
+        } else if (term instanceof BooleanExpr b && b.getVariable() != null) {
+            used.add(b.getVariable());
+        } else if (term instanceof QueueExpr q && q.getElement() != null) {
+            collectTermVariables(q.getElement(), used);
+        }
+    }
+
+    /** Parameters declared in the model or occurring in it (an undeclared one is still a parameter). */
+    public Set<Parameter> getUsedParameters() {
+        Set<Parameter> parameters = new LinkedHashSet<>();
+        for (VariableType v : variables.values()) {
+            if (v instanceof Parameter p) {
+                parameters.add(p);
+            }
+        }
+        for (VariableType v : getUsedVariables()) {
+            if (v instanceof Parameter p) {
+                parameters.add(p);
+            }
+        }
+        return parameters;
+    }
+
+    /** True if the specification needs parameters, hence IMITATOR (UPPAAL has no parameter synthesis). */
+    public boolean usesParameters() {
+        return !getUsedParameters().isEmpty();
+    }
+
+    /** Why this model (with these properties) cannot go to UPPAAL; empty if it can. Parameters come first. */
+    public List<String> uppaalProblems(Property... properties) {
+        return UppaalContext.translate(this, UppaalOptions.defaults(), List.of(properties)).problems();
+    }
+
+    public boolean canUseUppaal(Property... properties) {
+        return uppaalProblems(properties).isEmpty();
+    }
+
+    /**
+     * IMITATOR as soon as a parameter is involved (model or property), or when UPPAAL cannot express the model;
+     * UPPAAL otherwise.
+     */
+    public Backend preferredBackend(Property... properties) {
+        if (usesParameters() || java.util.Arrays.stream(properties).anyMatch(Property::usesParameters)) {
+            return Backend.IMITATOR;
+        }
+        return canUseUppaal(properties) ? Backend.UPPAAL : Backend.IMITATOR;
+    }
+
+    // ------------------------------------------------------------------
+    // UPPAAL
+    // ------------------------------------------------------------------
+
+    /**
+     * UPPAAL project file ({@code .xml}) standing for this model, the properties embedded as {@code <queries>}
+     * (counterpart of {@link #toIMITATOR()} + the {@code .imiprop}).
+     * @throws UppaalUnsupportedException if the model uses parameters or another feature UPPAAL lacks
+     */
+    public String toUppaal(Property... properties) {
+        return toUppaalSpec(UppaalOptions.defaults(), properties).xml();
+    }
+
+    public String toUppaal(UppaalOptions options, Property... properties) {
+        return toUppaalSpec(options, properties).xml();
+    }
+
+    /** UPPAAL query file ({@code .q}), one line per property (counterpart of the {@code .imiprop}). */
+    public String toUppaalQueries(Property... properties) {
+        return toUppaalSpec(UppaalOptions.defaults(), properties).queries();
+    }
+
+    /** Model, queries, time scale and warnings of the UPPAAL translation. */
+    public UppaalSpec toUppaalSpec(UppaalOptions options, Property... properties) {
+        UppaalContext.Result result = UppaalContext.translate(this, options, List.of(properties));
+        if (result.spec() == null) {
+            throw new UppaalUnsupportedException(result.problems());
+        }
+        return result.spec();
+    }
+
+    /** {xml, queries}: one rendering pass (called twice by {@link UppaalContext#translate}). */
+    String[] renderUppaal(UppaalContext ctx, List<Property> properties) {
+        // templates first: they register the queue types and the helper functions the declarations need
+        StringBuilder templates = new StringBuilder();
+        for (PTA pta : ptas) {
+            templates.append(pta.toUppaal(ctx));
+        }
+        List<String> queries = new ArrayList<>();
+        List<Integer> owners = new ArrayList<>();      // property index of each query
+        for (int i = 0; i < properties.size(); i++) {
+            for (String query : properties.get(i).toUppaalQueries(ctx)) {
+                queries.add(query);
+                owners.add(i);
+            }
+        }
+        ctx.setQueryOwners(owners);
+        StringBuilder declarations = new StringBuilder();
+        for (VariableType v : variables.values()) {
+            declarations.append(v.declarationToUppaal(ctx)).append("\n");
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        sb.append("<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>\n");
+        sb.append("<nta>\n\t<declaration>");
+        sb.append(UppaalContext.xml(generateUppaalDeclaration(ctx, declarations.toString())));
+        sb.append("</declaration>\n");
+        sb.append(templates);
+        sb.append("\t<system>system ");
+        sb.append(String.join(", ", ptas.stream().map(ctx::templateName).toList()));
+        sb.append(";</system>\n");
+        sb.append("\t<queries>\n");
+        for (int i = 0; i < queries.size(); i++) {
+            sb.append("\t\t<query>\n\t\t\t<formula>").append(UppaalContext.xml(queries.get(i))).append("</formula>\n");
+            sb.append("\t\t\t<comment>").append(UppaalContext.xml(properties.get(owners.get(i)).toString())).append("</comment>\n");
+            sb.append("\t\t</query>\n");
+        }
+        sb.append("\t</queries>\n</nta>\n");
+
+        String q = queries.isEmpty() ? "" : String.join("\n", queries) + "\n";
+        return new String[] {sb.toString(), q};
+    }
+
+    private String generateUppaalDeclaration(UppaalContext ctx, String variableDeclarations) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(headerTimestamp
+                ? "// Model automatically generated from an IMITATOR model ("
+                  + ZonedDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z")) + ")\n"
+                : "// Model automatically generated from an IMITATOR model\n");
+        sb.append("// Time scale: every clock value and rational is multiplied by ").append(ctx.timeScale()).append("\n");
+        for (String note : ctx.notes()) {
+            sb.append("// Note: ").append(note).append("\n");
+        }
+        for (String warning : new LinkedHashSet<>(ctx.warningsView())) {
+            sb.append("// Warning: ").append(warning).append("\n");
+        }
+
+        if (!ctx.queueTypes().isEmpty()) {
+            int cap = ctx.options().queueCapacity();
+            sb.append("\n// IMITATOR queues: bounded arrays (a push on a full queue aborts the verification)\n");
+            sb.append("const int ").append(UppaalContext.QUEUE_CAPACITY).append(" = ").append(cap).append(";\n");
+            for (ImiQueue.ElementType type : ctx.queueTypes()) {
+                String element = type == ImiQueue.ElementType.BOOL ? "bool" : ctx.intRange();
+                String zero = type == ImiQueue.ElementType.BOOL ? "false" : "0";
+                String t = ctx.queueType(type);
+                sb.append("typedef struct { ").append(element).append(" data[").append(UppaalContext.QUEUE_CAPACITY)
+                  .append("]; int[0,").append(UppaalContext.QUEUE_CAPACITY).append("] len; } ").append(t).append(";\n");
+                sb.append("void ").append(ctx.queueFunction(type, "push")).append("(").append(t).append(" &q, ")
+                  .append(type == ImiQueue.ElementType.BOOL ? "bool" : "int").append(" v) { q.data[q.len] = v; q.len++; }\n");
+                sb.append("void ").append(ctx.queueFunction(type, "clear")).append("(").append(t)
+                  .append(" &q) { for (i : int[0,").append(UppaalContext.QUEUE_CAPACITY).append("-1]) q.data[i] = ")
+                  .append(zero).append("; q.len = 0; }\n");
+            }
+        }
+
+        sb.append("\n// Variables\n").append(variableDeclarations);
+
+        List<UppaalContext.Route> channels = ctx.routes().stream().filter(r -> r.channel() != null).toList();
+        if (!channels.isEmpty()) {
+            sb.append("\n// Actions shared by several automata (sender: the top-most automaton, as IMITATOR updates it first)\n");
+            for (UppaalContext.Route r : channels) {
+                sb.append(r.kind() == UppaalContext.RouteKind.BROADCAST ? "broadcast chan " : "chan ")
+                  .append(r.channel()).append(";\n");
+            }
+        }
+
+        if (!ctx.helperFunctions().isEmpty()) {
+            sb.append("\n// Conditional updates (if ... then ... end)\n");
+            ctx.helperFunctions().forEach(f -> sb.append(f).append("\n"));
+        }
+        return sb.toString();
+    }
+
     // public void export2File(String outputFilePath) {
     //     String stringModel = this.toIMITATOR();  
 

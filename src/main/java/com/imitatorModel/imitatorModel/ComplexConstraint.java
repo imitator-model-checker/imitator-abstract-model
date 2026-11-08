@@ -298,6 +298,57 @@ public abstract class ComplexConstraint {
         throw new IllegalArgumentException("Unknown node: " + node.getClass());
     }
 
+    /** UPPAAL guard expression ({@code &&}, {@code ||}). Disjunctions over clocks must be split by the caller. */
+    public String toUppaal(UppaalContext ctx) {
+        return printUppaal(this, 0, ctx);
+    }
+
+    /** UPPAAL invariant: a conjunction of upper bounds on clocks and of clock-free atoms; "" when trivially true. */
+    public String toUppaalInvariant(UppaalContext ctx) {
+        if (haveDisjunction()) {
+            ctx.problem("invariant " + toIMITATOR() + " contains a disjunction");
+            return "";
+        }
+        List<String> atoms = new ArrayList<>();
+        collectInvariantAtoms(this, ctx, atoms);
+        return String.join(" && ", atoms);
+    }
+
+    private static void collectInvariantAtoms(ComplexConstraint node, UppaalContext ctx, List<String> atoms) {
+        if (node instanceof ConstraintNode c) {
+            String atom = c.getConstraint().toUppaal(ctx, true);
+            if (!atom.equals("true")) {
+                atoms.add(atom);
+            }
+        } else if (node instanceof AndNode and) {
+            and.getChildren().forEach(child -> collectInvariantAtoms(child, ctx, atoms));
+        }
+    }
+
+    /** True if some clock occurs in the constraint. */
+    public boolean usesClocks() {
+        return getVariables().stream().anyMatch(v -> v instanceof Clock);
+    }
+
+    private static String printUppaal(ComplexConstraint node, int parentPrecedence, UppaalContext ctx) {
+        if (node instanceof ConstraintNode c) {
+            return c.getConstraint().toUppaal(ctx);
+        }
+        if (node instanceof AndNode and) {
+            String s = and.getChildren().stream()
+                    .map(child -> printUppaal(child, AND_PRECEDENCE, ctx))
+                    .collect(Collectors.joining(" && "));
+            return parentPrecedence > AND_PRECEDENCE ? "(" + s + ")" : s;
+        }
+        if (node instanceof OrNode or) {
+            String s = or.getChildren().stream()
+                    .map(child -> printUppaal(child, OR_PRECEDENCE, ctx))
+                    .collect(Collectors.joining(" || "));
+            return parentPrecedence > OR_PRECEDENCE ? "(" + s + ")" : s;
+        }
+        throw new IllegalArgumentException("Unknown node: " + node.getClass());
+    }
+
     public boolean haveDisjunction() {
         if (this instanceof OrNode) {
             return true;

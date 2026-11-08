@@ -176,6 +176,36 @@ public final class LinearExpr implements UpdateTerm, Term {
         return format();
     }
 
+    /**
+     * UPPAAL expression: integer coefficients only; constants multiplied by the time scale unless every variable
+     * is an IMITATOR {@code int}. A constant-only expression is taken as time-like.
+     */
+    public String toUppaal(UppaalContext ctx) {
+        UppaalContext.Sort sort = ctx.sortOf(coefficients.keySet(), "`" + this + "`");
+        return toUppaal(ctx, sort == UppaalContext.Sort.INT ? sort : UppaalContext.Sort.RATIONAL);
+    }
+
+    String toUppaal(UppaalContext ctx, UppaalContext.Sort sort) {
+        return UppaalLinear.format(ctx, coefficients, constant, sort, "`" + this + "`");
+    }
+
+    /** Value assigned to {@code target}: scaled if the target is a clock or a rational, not if it is an int. */
+    @Override
+    public String toUppaal(UppaalContext ctx, VariableType target) {
+        String where = "`" + target.getName() + " := " + this + "`";
+        UppaalContext.Sort sort = ctx.sortOf(coefficients.keySet(), where);
+        boolean intTarget = target instanceof Int;
+        if (intTarget && sort == UppaalContext.Sort.RATIONAL || !intTarget && sort == UppaalContext.Sort.INT) {
+            ctx.problem("update " + where + " mixes int and clock/rational (IMITATOR rejects it too)");
+        }
+        for (VariableType v : coefficients.keySet()) {
+            if (v instanceof Clock) {
+                ctx.problem("update " + where + " reads a clock: UPPAAL assigns clocks and variables from integer expressions only");
+            }
+        }
+        return toUppaal(ctx, intTarget ? UppaalContext.Sort.INT : UppaalContext.Sort.RATIONAL);
+    }
+
     private String format() {
         List<String> parts = new ArrayList<>();
 

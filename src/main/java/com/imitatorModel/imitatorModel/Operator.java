@@ -22,6 +22,11 @@ public enum Operator {
 		return symbol;
 	}
 
+	/** UPPAAL (C) operator: equality is {@code ==}. */
+	public String toUppaal(){
+		return this == EQ ? "==" : symbol;
+	}
+
     public  Operator getInverse() {
         switch (this) {
             case LT: return GE;

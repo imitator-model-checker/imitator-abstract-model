@@ -1,5 +1,6 @@
 package com.imitatorModel.imitatorModel;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -63,6 +64,101 @@ public class Transition {
 
     public Set<Location> getTo() {
         return destinations;
+    }
+
+    /**
+     * UPPAAL {@code <transition>} elements from {@code source} (one per action, destination and disjunct, as for
+     * IMITATOR). The sync label follows the route of the action ({@link UppaalContext}): none for an action of a
+     * single automaton, {@code a!} for the first declarer, {@code a?} for the others; edges on an action that
+     * IMITATOR removes are dropped. A disjunctive guard over clocks is split (UPPAAL accepts disjunctions only
+     * over discrete variables).
+     */
+    public List<String> toUppaal(UppaalContext ctx, Location source) {
+        PTA pta = source.getOwner();
+        List<ComplexConstraint> guards;
+        if (guard.haveDisjunction() && guard.usesClocks()) {
+            ComplexConstraint dnf = guard.toDNF();
+            guards = dnf.haveDisjunction() ? dnf.splitDisjunction() : List.of(dnf);
+        } else {
+            guards = List.of(guard);
+        }
+        List<String> guardTexts = new ArrayList<>();
+        for (ComplexConstraint g : guards) {
+            String text = g.toUppaal(ctx);
+            if (!text.equals("false")) {
+                guardTexts.add(text.equals("true") ? "" : text);
+            }
+        }
+
+        List<Location> sortedDestinations = destinations.stream()
+                .sorted(Comparator.comparing(Location::getName))
+                .toList();
+        List<String> syncs = new ArrayList<>();
+        if (actions.isEmpty()) {
+            syncs.add("");
+        } else {
+            for (Action a : actions.stream().sorted(Comparator.comparing(Action::getName)).toList()) {
+                UppaalContext.Route route = ctx.route(a);
+                if (route == null || route.kind() == UppaalContext.RouteKind.DEAD) {
+                    continue;   // undeclared (problem already recorded) or removed by IMITATOR
+                }
+                if (route.kind() == UppaalContext.RouteKind.LOCAL) {
+                    syncs.add("");
+                } else {
+                    syncs.add(route.channel() + (route.sender().equals(pta.getName()) ? "!" : "?"));
+                }
+            }
+        }
+        if (guardTexts.isEmpty() || syncs.isEmpty()) {
+            return List.of();
+        }
+        // one helper function per conditional update: print the updates once, reuse the text on every edge
+        String assignment = updates.toUppaal(ctx);
+
+        List<String> edges = new ArrayList<>();
+        for (String g : guardTexts) {
+            for (String sync : syncs) {
+                for (Location dest : sortedDestinations) {
+                    edges.add(edge(ctx, pta, source, dest, g, sync, assignment));
+                }
+            }
+        }
+        return edges;
+    }
+
+    private static String edge(UppaalContext ctx, PTA pta, Location source, Location dest,
+                               String guard, String sync, String assignment) {
+        int[] p = ctx.position(pta, source);
+        int[] q = ctx.position(pta, dest);
+        boolean selfLoop = source.equals(dest);
+        int[] mid = null;
+        if (p != null && q != null) {
+            mid = selfLoop ? new int[] {p[0], p[1] - 70} : new int[] {(p[0] + q[0]) / 2, (p[1] + q[1]) / 2};
+        }
+        StringBuilder sb = new StringBuilder("\t\t<transition>\n");
+        sb.append("\t\t\t<source ref=\"").append(ctx.locationId(pta, source)).append("\"/>\n");
+        sb.append("\t\t\t<target ref=\"").append(ctx.locationId(pta, dest)).append("\"/>\n");
+        int line = 0;
+        if (!guard.isEmpty()) {
+            sb.append(label("guard", guard, mid, line++));
+        }
+        if (!sync.isEmpty()) {
+            sb.append(label("synchronisation", sync, mid, line++));
+        }
+        if (!assignment.isEmpty()) {
+            sb.append(label("assignment", assignment, mid, line++));
+        }
+        if (selfLoop && p != null) {
+            sb.append("\t\t\t<nail x=\"").append(p[0] - 30).append("\" y=\"").append(p[1] - 60).append("\"/>\n");
+            sb.append("\t\t\t<nail x=\"").append(p[0] + 30).append("\" y=\"").append(p[1] - 60).append("\"/>\n");
+        }
+        sb.append("\t\t</transition>\n");
+        return sb.toString();
+    }
+
+    private static String label(String kind, String text, int[] mid, int line) {
+        String xy = mid == null ? "" : " x=\"" + mid[0] + "\" y=\"" + (mid[1] - 17 * (3 - line)) + "\"";
+        return "\t\t\t<label kind=\"" + kind + "\"" + xy + ">" + UppaalContext.xml(text) + "</label>\n";
     }
 
     public String toIMITATOR() {

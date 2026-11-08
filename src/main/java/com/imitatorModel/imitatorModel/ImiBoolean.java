@@ -41,6 +41,17 @@ public class ImiBoolean extends VariableType {
         return "False";
     }
 
+    @Override
+    public String getUppaalType(UppaalContext ctx) {
+        return value == null ? "bool" : "const bool";
+    }
+
+    @Override
+    public String declarationToUppaal(UppaalContext ctx) {
+        String init = value == null ? "false" : value.toString();
+        return getUppaalType(ctx) + " " + toUppaal(ctx) + " = " + init + ";";
+    }
+
     public BooleanExpr negate() {
         return BooleanExpr.of(this).negate();
     }

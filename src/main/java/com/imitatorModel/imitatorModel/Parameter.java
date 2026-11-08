@@ -19,4 +19,11 @@ public class Parameter extends NumericVariable {
         return "parameter";
     }
 
+    /** UPPAAL has no parameters: always records a problem (the model must go to IMITATOR). */
+    @Override
+    public String getUppaalType(UppaalContext ctx) {
+        ctx.problem("parameter " + getName() + ": UPPAAL has no parameters (no parameter synthesis)");
+        return null;
+    }
+
 }

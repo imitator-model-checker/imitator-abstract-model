@@ -173,6 +173,25 @@ public final class Constraint {
         return leftTerm.toIMITATOR() + " " + operator.toIMITATOR() + " " + rightTerm.toIMITATOR();
     }
 
+    /** UPPAAL guard atom, e.g. {@code x - y <= 3}, {@code r == 2}, {@code !b}, {@code true}. */
+    public String toUppaal(UppaalContext ctx) {
+        return toUppaal(ctx, false);
+    }
+
+    /**
+     * With {@code invariant}, a clock atom must be an upper bound ({@code x - y >= e} is turned into
+     * {@code y - x <= -e}); a lower bound on a single clock is recorded as a problem.
+     */
+    public String toUppaal(UppaalContext ctx, boolean invariant) {
+        if (booleanTerm != null) {
+            return booleanTerm.toUppaal(ctx);
+        }
+        if (truthConst != null) {
+            return truthConst ? "true" : "false";
+        }
+        return UppaalLinear.constraint(ctx, leftTerm, operator, rightTerm, invariant);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {

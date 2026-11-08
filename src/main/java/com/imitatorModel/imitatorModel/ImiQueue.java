@@ -28,6 +28,15 @@ public final class ImiQueue extends VariableType {
         public String toIMITATOR() {
             return imitatorName;
         }
+
+        /** Short tag used in the generated UPPAAL helper names ({@code imi__rqueue_t}, ...). */
+        public String toUppaal() {
+            return switch (this) {
+                case RATIONAL -> "r";
+                case INT -> "i";
+                case BOOL -> "b";
+            };
+        }
     }
 
     private final ElementType elementType;
@@ -57,6 +66,17 @@ public final class ImiQueue extends VariableType {
     @Override
     public String initialValueToIMITATOR() {
         return QueueExpr.EMPTY;
+    }
+
+    @Override
+    public String getUppaalType(UppaalContext ctx) {
+        return ctx.queueType(elementType);
+    }
+
+    @Override
+    public String declarationToUppaal(UppaalContext ctx) {
+        return getUppaalType(ctx) + " " + toUppaal(ctx) + ";   // " + getIMITATORType()
+                + ", at most " + ctx.options().queueCapacity() + " elements";
     }
 
     /** {@code queue_push(value, this)} (rational or int queue). */

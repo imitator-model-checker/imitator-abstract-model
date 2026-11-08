@@ -157,6 +157,40 @@ public class PTA {
     }
 
 
+    /**
+     * UPPAAL {@code <template>} of this automaton (no parameters, so {@code system} makes it one process with the
+     * same name): locations, initial location, transitions. Online mode and {@code #include} files have no
+     * UPPAAL counterpart: the template is always written in full.
+     */
+    public String toUppaal(UppaalContext ctx) {
+        StringBuilder sb = new StringBuilder("\t<template>\n");
+        sb.append("\t\t<name>").append(ctx.templateName(this)).append("</name>\n");
+        for (Location location : locations.values()) {
+            sb.append(location.toUppaal(ctx));
+        }
+        if (initial_location == null) {
+            ctx.problem("automaton " + name + " has no initial location");
+        } else {
+            sb.append("\t\t<init ref=\"").append(ctx.locationId(this, initial_location)).append("\"/>\n");
+        }
+        for (Location location : locations.values()) {
+            if (location.getIsWaiting()) {
+                continue;
+            }
+            for (Transition t : location.getTransitions()) {
+                for (Location dst : t.getTo()) {
+                    if (!hasLocation(dst.getName()) || getLocation(dst.getName()).getIsWaiting()) {
+                        ctx.problem("transition of " + name + "." + location.getName() + " goes to "
+                                + dst.getName() + ", which is not a location of " + name);
+                    }
+                }
+                t.toUppaal(ctx, location).forEach(sb::append);
+            }
+        }
+        sb.append("\t</template>\n");
+        return sb.toString();
+    }
+
     public String toIMITATOR() {
         try {
             if (separateFileName != null) {

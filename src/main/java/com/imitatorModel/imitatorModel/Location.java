@@ -185,6 +185,15 @@ public class Location {
 		return name;
 	}
 
+    /** UPPAAL name of this location in the template of its owner (renamed if it clashes with a global). */
+    public String nameToUppaal(UppaalContext ctx){
+        if (owner == null) {
+            ctx.problem("location " + name + " does not belong to any automaton");
+            return name;
+        }
+        return ctx.locationName(owner, this);
+    }
+
     
     @Override
     public boolean equals(Object o) {
@@ -196,6 +205,65 @@ public class Location {
     @Override
     public int hashCode() {
         return Objects.hash(name);
+    }
+
+    /**
+     * UPPAAL {@code <location>} element: invariant (upper bounds only), {@code x' == 0} for a stopwatch or a
+     * flow of rate 0, {@code <urgent/>}. IMITATOR {@code accepting} has no UPPAAL counterpart: it is kept as a
+     * comment and used by {@link StatePredicate#accepting()}. Transitions are printed by {@link PTA#toUppaal}.
+     */
+    public String toUppaal(UppaalContext ctx) {
+        if (owner == null) {
+            ctx.problem("location " + name + " does not belong to any automaton");
+            return "";
+        }
+        if (isWaiting) {
+            ctx.problem("location " + name + " of " + owner.getName() + " is an online placeholder (online mode has no UPPAAL counterpart)");
+            return "";
+        }
+        List<String> invariantParts = new ArrayList<>();
+        String inv = invariant.toUppaalInvariant(ctx);
+        if (!inv.isEmpty()) {
+            invariantParts.add(inv);
+        }
+        for (Clock c : stop) {
+            invariantParts.add(c.toUppaal(ctx) + "' == 0");
+        }
+        for (Pair<VariableType, LinearExpr> r : rate) {
+            LinearExpr e = r.getSecond();
+            if (!(r.getFirst() instanceof Clock)) {
+                ctx.problem("flow on the non-clock " + r.getFirst().getName() + " in " + owner.getName() + "." + name);
+            } else if (e.equals(LinearExpr.ZERO)) {
+                invariantParts.add(r.getFirst().toUppaal(ctx) + "' == 0");
+            } else if (!e.equals(LinearExpr.ONE)) {
+                ctx.problem("flow " + r.getFirst().getName() + "' = " + e + " in " + owner.getName() + "." + name
+                        + ": UPPAAL symbolic model checking supports rates 0 and 1 only");
+            }
+        }
+
+        int[] p = ctx.position(owner, this);
+        StringBuilder sb = new StringBuilder("\t\t<location id=\"").append(ctx.locationId(owner, this)).append("\"");
+        if (p != null) {
+            sb.append(" x=\"").append(p[0]).append("\" y=\"").append(p[1]).append("\"");
+        }
+        sb.append(">\n\t\t\t<name").append(at(p, -30, -34)).append(">").append(nameToUppaal(ctx)).append("</name>\n");
+        if (!invariantParts.isEmpty()) {
+            sb.append("\t\t\t<label kind=\"invariant\"").append(at(p, -30, 17)).append(">")
+              .append(UppaalContext.xml(String.join(" && ", invariantParts))).append("</label>\n");
+        }
+        if (isAccepting) {
+            sb.append("\t\t\t<label kind=\"comments\"").append(at(p, -30, 34)).append(">accepting</label>\n");
+        }
+        if (isUrgent) {
+            sb.append("\t\t\t<urgent/>\n");
+        }
+        sb.append("\t\t</location>\n");
+        return sb.toString();
+    }
+
+    // x/y attributes relative to position p (none without layout)
+    static String at(int[] p, int dx, int dy) {
+        return p == null ? "" : " x=\"" + (p[0] + dx) + "\" y=\"" + (p[1] + dy) + "\"";
     }
 
 	public String toIMITATOR(){

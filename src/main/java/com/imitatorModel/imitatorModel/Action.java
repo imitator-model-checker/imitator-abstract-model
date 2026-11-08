@@ -32,6 +32,12 @@ public class Action {
    public String toIMITATOR(){
        return getName();
    }
+
+   /** UPPAAL channel of this action, or null when the action needs no channel (internal edge, or dropped). */
+   public String toUppaal(UppaalContext ctx){
+       UppaalContext.Route route = ctx.route(this);
+       return route == null ? null : route.channel();
+   }
     
    @Override
     public String toString() {

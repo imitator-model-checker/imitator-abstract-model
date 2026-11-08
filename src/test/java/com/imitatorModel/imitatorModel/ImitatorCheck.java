@@ -28,6 +28,30 @@ final class ImitatorCheck {
         return null;
     }
 
+    /** Constraint printed by IMITATOR in the .res file ("True", "False", or a parameter constraint). */
+    static String result(String imi, String imiprop) throws Exception {
+        String bin = binary();
+        assumeTrue(bin != null, "IMITATOR binary not found (set IMITATOR_BIN)");
+        Path dir = Files.createTempDirectory("imi-test");
+        Path file = dir.resolve("model.imi");
+        Path prop = dir.resolve("model.imiprop");
+        Files.writeString(file, imi);
+        Files.writeString(prop, imiprop);
+        Process p = new ProcessBuilder(bin, file.toString(), prop.toString(), "-no-var-autoremove")
+                .directory(dir.toFile())
+                .redirectErrorStream(true)
+                .start();
+        String out = new String(p.getInputStream().readAllBytes());
+        p.waitFor();
+        Path res = dir.resolve("model.res");
+        assertTrue(Files.exists(res), "IMITATOR produced no result:\n" + out + "\n--- model ---\n" + imi);
+        String text = Files.readString(res);
+        int begin = text.indexOf("BEGIN CONSTRAINT");
+        int end = text.indexOf("END CONSTRAINT");
+        assertTrue(begin >= 0 && end > begin, "no constraint in the result:\n" + text);
+        return text.substring(begin + "BEGIN CONSTRAINT".length(), end).trim();
+    }
+
     static void assertSyntaxOk(String imi) throws Exception {
         String bin = binary();
         assumeTrue(bin != null, "IMITATOR binary not found (set IMITATOR_BIN)");
